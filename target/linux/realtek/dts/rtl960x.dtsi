@@ -134,13 +134,15 @@
 
 		gpio0: gpio-controller@3300 {
 			// Only first bank have cpu interrupt mask registers
-			compatible = "realtek,rtl9300-gpio";
+			compatible = "realtek,rtl9607-gpio";
 			reg = <0x3300 0x1c>, <0x3338 0x8>;
-			realtek,enable-reg = <0x1b000038 0x4>;
 
 			gpio-controller;
 			#gpio-cells = <2>;
 			ngpios = <32>;
+
+			gpio-ranges = <&pinmux0 0 0 32>;
+			// gpio-reserved-ranges = <start count> TODO
 
 			interrupt-controller;
 			#interrupt-cells = <2>;
@@ -151,11 +153,13 @@
 		gpio1: gpio-controller@331c {
 			compatible = "realtek,rtl9607-gpio";
 			reg = <0x331c 0x1c>;
-			realtek,enable-reg = <0x1b00003C 0x4>;
 
 			gpio-controller;
 			#gpio-cells = <2>;
 			ngpios = <32>;
+
+			gpio-ranges = <&pinmux1 0 0 32>;
+			// gpio-reserved-ranges = <start count> TODO
 
 			interrupt-controller;
 			#interrupt-cells = <2>;
@@ -166,11 +170,13 @@
 		gpio2: gpio-controller@3340 {
 			compatible = "realtek,rtl9607-gpio";
 			reg = <0x3340 0x1c>;
-			realtek,enable-reg = <0x1b000040 0x4>;
 
 			gpio-controller;
 			#gpio-cells = <2>;
 			ngpios = <32>;
+
+			gpio-ranges = <&pinmux2 0 0 32>;
+			// gpio-reserved-ranges = <start count> TODO
 
 			interrupt-controller;
 			#interrupt-cells = <2>;
@@ -199,6 +205,9 @@
 			interrupt-parent = <&gic>;
 			#interrupt-cells = <3>;
 			interrupts = <GIC_SHARED 23 IRQ_TYPE_LEVEL_HIGH>;
+
+			pinctrl-0 = <&pinmux_enable_uart0>;
+			pinctrl-names = "default";
 
 			reg-io-width = <1>;
 			reg-shift = <2>;
@@ -247,6 +256,9 @@
 			clocks = <&i2cclock>;
 			realtek,scl = <0>;
 
+			pinctrl-0 = <&pinmux_enable_i2c0>;
+			pinctrl-names = "default";
+
 			status = "disabled";
 		};
 
@@ -265,6 +277,68 @@
 			compatible = "realtek,rtl9607-thermal";
 			#thermal-sensor-cells = <0>;
 		};
+	};
+
+	range: gpio-range {
+		#pinctrl-single,gpio-range-cells = <3>;
+	};
+
+	pinmux0: pinmux@1b000038 {
+		compatible = "pinctrl-single";
+		reg = <0x1b000038 0x4>;
+
+		pinctrl-single,bit-per-mux;
+		pinctrl-single,register-width = <32>;
+		pinctrl-single,function-mask = <0x1>;
+		#pinctrl-cells = <2>;
+		pinctrl-single,gpio-range = <&range 0 32 1>;
+
+		// Disable gpio0 pins 0-1
+		pinmux_enable_i2c0: i2c0-pins {
+			pinctrl-single,bits = <0x0 0x0 0x3>;
+		};
+
+		// For future reference:
+		// Disable gpio0 pins 6-21
+		pinmux_enable_switch_leds_gpio0: switch-led0-pins {
+			pinctrl-single,bits = <0x0 0x0 0x3197c0>;
+		};
+	};
+
+	pinmux1: pinmux@1b00003c {
+		compatible = "pinctrl-single";
+		reg = <0x1b00003c 0x4>;
+
+		pinctrl-single,bit-per-mux;
+		pinctrl-single,register-width = <32>;
+		pinctrl-single,function-mask = <0x1>;
+		#pinctrl-cells = <2>;
+		// TODO set 'strict' in struct pinmux_ops to use single range
+		// of_pinctrl_get()?
+		pinctrl-single,gpio-range =	<&range 0 9 1>, // GPIO 0-8
+						<&range 11 21 1>; // GPIO 11-32
+
+		// Disable gpio1 pins 9-10
+		pinmux_enable_uart0: uart0-pins {
+			pinctrl-single,bits = <0x0 0x0 0x600>;
+		};
+
+		// For future reference:
+		// Disable gpio1 pins 0-3
+		pinmux_enable_switch_leds_gpio1: switch-led1-pins {
+			pinctrl-single,bits = <0x0 0x0 0xb>;
+		};
+	};
+
+	pinmux2: pinmux@1b000040 {
+		compatible = "pinctrl-single";
+		reg = <0x1b000040 0x4>;
+
+		pinctrl-single,bit-per-mux;
+		pinctrl-single,register-width = <32>;
+		pinctrl-single,function-mask = <0x1>;
+		#pinctrl-cells = <2>;
+		pinctrl-single,gpio-range = <&range 0 32 1>;
 	};
 
 	thermal_zones: thermal-zones {

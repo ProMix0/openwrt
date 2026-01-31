@@ -1,32 +1,36 @@
 diff --git a/drivers/gpio/gpio-realtek-otto.c b/drivers/gpio/gpio-realtek-otto.c
-index d6418f89d3f6..5e010a712afd 100644
+index d6418f89d3f6..9d1f138ffc9c 100644
 --- a/drivers/gpio/gpio-realtek-otto.c
 +++ b/drivers/gpio/gpio-realtek-otto.c
-@@ -67,6 +67,7 @@ struct realtek_gpio_ctrl {
- 	struct gpio_chip gc;
- 	void __iomem *base;
- 	void __iomem *cpumask_base;
-+	void __iomem *enable_reg;
- 	struct cpumask cpu_irq_maskable;
- 	raw_spinlock_t lock;
- 	u8 intr_mask[REALTEK_GPIO_MAX];
-@@ -148,6 +149,39 @@ static void realtek_gpio_bank_write(void __iomem *reg, u32 value)
+@@ -6,6 +6,7 @@
+ #include <linux/minmax.h>
+ #include <linux/mod_devicetable.h>
+ #include <linux/module.h>
++#include <linux/pinctrl/consumer.h>
+ #include <linux/platform_device.h>
+ #include <linux/property.h>
+ 
+@@ -95,6 +96,11 @@ enum realtek_gpio_flags {
+ 	 * range, where the per-cpu enable masks are located.
+ 	 */
+ 	GPIO_INTERRUPTS_PER_CPU = BIT(2),
++	/*
++	 * Use pinctrl to request/free pins. Used in RTL9607C to toggle
++	 * pins between GPIO and peripheral
++	 */
++	GPIO_PINCTRL = BIT(3),
+ };
+ 
+ static struct realtek_gpio_ctrl *irq_data_to_ctrl(struct irq_data *data)
+@@ -148,6 +154,24 @@ static void realtek_gpio_bank_write(void __iomem *reg, u32 value)
  	iowrite32(value, reg);
  }
  
++#ifdef CONFIG_PINCTRL
 +static int realtek_request(struct gpio_chip *chip, unsigned gpio_pin)
 +{
 +	if (gpio_pin < chip->ngpio) {
-+		struct realtek_gpio_ctrl *ctrl = gpiochip_get_data(chip);
-+		unsigned long flags;
-+		u32 reg;
-+
-+		raw_spin_lock_irqsave(&ctrl->lock, flags);
-+		reg = ctrl->bank_read(ctrl->enable_reg);
-+		reg |= BIT(gpio_pin);
-+		ctrl->bank_write(ctrl->enable_reg, reg);
-+		raw_spin_unlock_irqrestore(&ctrl->lock, flags);
-+		return 0;
++		return pinctrl_gpio_request(chip, gpio_pin);
 +	}
 +
 +	return -EINVAL;
@@ -35,43 +39,49 @@ index d6418f89d3f6..5e010a712afd 100644
 +static void realtek_free(struct gpio_chip *chip, unsigned gpio_pin)
 +{
 +	if (gpio_pin < chip->ngpio) {
-+		struct realtek_gpio_ctrl *ctrl = gpiochip_get_data(chip);
-+		unsigned long flags;
-+		u32 reg;
-+
-+		raw_spin_lock_irqsave(&ctrl->lock, flags);
-+		reg = ctrl->bank_read(ctrl->enable_reg);
-+		reg &= ~BIT(gpio_pin);
-+		ctrl->bank_write(ctrl->enable_reg, reg);
-+		raw_spin_unlock_irqrestore(&ctrl->lock, flags);
++		pinctrl_gpio_free(chip, gpio_pin);
 +	}
 +}
++#endif
 +
  static unsigned int realtek_gpio_line_imr_pos(unsigned int line)
  {
  	return 2 * line;
-@@ -350,6 +384,10 @@ static const struct of_device_id realtek_gpio_of_match[] = {
+@@ -350,6 +374,10 @@ static const struct of_device_id realtek_gpio_of_match[] = {
  	{
  		.compatible = "realtek,rtl9310-gpio",
  	},
 +	{
 +		.compatible = "realtek,rtl9607-gpio",
-+		.data = (void *)GPIO_PORTS_REVERSED
++		.data = (void *)(GPIO_PORTS_REVERSED | GPIO_PINCTRL)
 +	},
  	{}
  };
  MODULE_DEVICE_TABLE(of, realtek_gpio_of_match);
-@@ -410,6 +448,12 @@ static int realtek_gpio_probe(struct platform_device *pdev)
+@@ -398,6 +426,11 @@ static int realtek_gpio_probe(struct platform_device *pdev)
+ 		ctrl->bank_write = realtek_gpio_bank_write_swapped;
+ 		ctrl->line_imr_pos = realtek_gpio_line_imr_pos_swapped;
+ 	}
++	// TODO
++	// if (dev_flags & GPIO_PINCTRL) {
++	// 	gen_gc_flags |= GPIO_GENERIC_PINCTRL_BACKEND;
++	// }
++	// for kernel above 6.18
  
+ 	err = bgpio_init(&ctrl->gc, dev, 4,
+ 		ctrl->base + REALTEK_GPIO_REG_DATA, NULL, NULL,
+@@ -411,6 +444,13 @@ static int realtek_gpio_probe(struct platform_device *pdev)
  	ctrl->gc.ngpio = ngpios;
  	ctrl->gc.owner = THIS_MODULE;
-+	// enable-reg might include optional size field - ignore it for now
-+	err = device_property_read_u32(dev, "realtek,enable-reg", (u32*)&ctrl->enable_reg);
-+	if (!err) {
+ 
++#ifdef CONFIG_PINCTRL
++	if (dev_flags & GPIO_PINCTRL) {
 +		ctrl->gc.request = realtek_request;
 +		ctrl->gc.free = realtek_free;
 +	}
- 
++#endif
++
  	irq = platform_get_irq_optional(pdev, 0);
  	if (!(dev_flags & GPIO_INTERRUPTS_DISABLED) && irq > 0) {
+ 		girq = &ctrl->gc.irq;
 
