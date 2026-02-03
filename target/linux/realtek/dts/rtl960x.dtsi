@@ -3,6 +3,7 @@
 #include <dt-bindings/interrupt-controller/mips-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/clock/rtl83xx-clk.h>
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	#address-cells = <1>;
@@ -146,6 +147,20 @@
 			interrupts = <GIC_SHARED 21 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
+		gpio1: gpio-controller@331c {
+			compatible = "realtek,rtl9300-gpio", "realtek,otto-gpio";
+			reg = <0x331c 0x1c>, <0x3340 0x8>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <32>;
+
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SHARED 22 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
 		timer0: timer@3200 {
 			compatible = "realtek,rtl931x-timer", "realtek,otto-timer";
 			reg = <0x3200 0x10>, <0x3210 0x10>, <0x3220 0x10>,
@@ -201,7 +216,7 @@
 		clock-frequency = <62500000>;
 	};
 
-	switchcore@1b000000 {
+	switchcore: switchcore@1b000000 {
 		compatible = "syscon", "simple-mfd";
 		reg = <0x1b000000 0x1000000>;
 		#address-cells = <1>;
@@ -249,5 +264,63 @@
 				};
 			};
 		};
+	};
+
+	pcie0: pcie@18b20000 {
+		compatible = "realtek,rtl960x-pcie";
+		reg = <0x18b20000 0x1000>,
+		      <0x18b21000 0x1000>,
+		      <0x18b30000 0x10000>;
+		reg-names = "hostcfg", "hostext", "devcfg";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		bus-range = <0 255>;
+
+		ranges = <0x02000000 0 0x1a000000 0x1a000000 0 0x01000000>,
+			 <0x01000000 0 0x00000000 0x18e00000 0 0x00010000>;
+
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SHARED 49 IRQ_TYPE_LEVEL_HIGH>;
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 7>;
+		interrupt-map = <0 0 0 1 &gic GIC_SHARED 49 IRQ_TYPE_LEVEL_HIGH>,
+				<0 0 0 2 &gic GIC_SHARED 49 IRQ_TYPE_LEVEL_HIGH>,
+				<0 0 0 3 &gic GIC_SHARED 49 IRQ_TYPE_LEVEL_HIGH>,
+				<0 0 0 4 &gic GIC_SHARED 49 IRQ_TYPE_LEVEL_HIGH>;
+
+		realtek,pcie-port = <0>;
+		realtek,swcore = <&switchcore>;
+		status = "disabled";
+	};
+
+	pcie1: pcie@18b00000 {
+		compatible = "realtek,rtl960x-pcie";
+		reg = <0x18b00000 0x1000>,
+		      <0x18b01000 0x1000>,
+		      <0x18b10000 0x10000>;
+		reg-names = "hostcfg", "hostext", "devcfg";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		bus-range = <0 255>;
+
+		ranges = <0x02000000 0 0x19000000 0x19000000 0 0x01000000>,
+			 <0x01000000 0 0x00000000 0x18c00000 0 0x00010000>;
+
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SHARED 50 IRQ_TYPE_LEVEL_HIGH>;
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 7>;
+		interrupt-map = <0 0 0 1 &gic GIC_SHARED 50 IRQ_TYPE_LEVEL_HIGH>,
+				<0 0 0 2 &gic GIC_SHARED 50 IRQ_TYPE_LEVEL_HIGH>,
+				<0 0 0 3 &gic GIC_SHARED 50 IRQ_TYPE_LEVEL_HIGH>,
+				<0 0 0 4 &gic GIC_SHARED 50 IRQ_TYPE_LEVEL_HIGH>;
+
+		realtek,pcie-port = <1>;
+		realtek,swcore = <&switchcore>;
+		status = "disabled";
 	};
 };

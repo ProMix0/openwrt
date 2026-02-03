@@ -1,0 +1,51 @@
+--- a/drivers/pci/controller/Kconfig
++++ b/drivers/pci/controller/Kconfig
+@@ -344,6 +344,15 @@ config PCIE_XILINX_CPM
+ 	  Say 'Y' here if you want kernel support for the
+ 	  Xilinx Versal CPM host bridge.
+ 
++config PCIE_RTL960X
++	bool "Realtek RTL960x PCIe controller"
++	depends on MACH_REALTEK_RTL && RTL960X
++	depends on PCI
++	select PCI_HOST_COMMON
++	help
++	  Say Y here to enable PCIe controller support for the Realtek
++	  RTL9607C and similar SoCs.
++
+ source "drivers/pci/controller/cadence/Kconfig"
+ source "drivers/pci/controller/dwc/Kconfig"
+ source "drivers/pci/controller/mobiveil/Kconfig"
+--- a/drivers/pci/controller/Makefile
++++ b/drivers/pci/controller/Makefile
+@@ -39,6 +39,7 @@ obj-$(CONFIG_PCI_LOONGSON) += pci-loongs
+ obj-$(CONFIG_PCIE_HISI_ERR) += pcie-hisi-error.o
+ obj-$(CONFIG_PCIE_APPLE) += pcie-apple.o
+ obj-$(CONFIG_PCIE_MT7621) += pcie-mt7621.o
++obj-$(CONFIG_PCIE_RTL960X) += pcie-rtl960x.o
+ 
+ # pcie-hisi.o quirks are needed even without CONFIG_PCIE_DW
+ obj-y				+= dwc/
+--- a/arch/mips/Kconfig
++++ b/arch/mips/Kconfig
+@@ -1054,6 +1054,7 @@ config RTL960X
+ 	select SYS_SUPPORTS_SMP
+ 	select SYS_SUPPORTS_MIPS_CPS
+ 	select HAVE_PCI
++	select PCI_DRIVERS_GENERIC
+ 	select SYS_SUPPORTS_ZBOOT
+ 	select MIPS_EXTERNAL_TIMER
+ 
+diff --git a/arch/mips/pci/Makefile b/arch/mips/pci/Makefile
+index a6e9785b537e..bd80ef292520 100644
+--- a/arch/mips/pci/Makefile
++++ b/arch/mips/pci/Makefile
+@@ -46,6 +46,7 @@ obj-$(CONFIG_SOC_TX4938)	+= pci-tx4938.o
+ obj-$(CONFIG_TOSHIBA_RBTX4927)	+= fixup-rbtx4927.o
+ obj-$(CONFIG_MIKROTIK_RB532)	+= pci-rc32434.o ops-rc32434.o fixup-rc32434.o
+ obj-$(CONFIG_CAVIUM_OCTEON_SOC) += pci-octeon.o pcie-octeon.o
++obj-$(CONFIG_RTL960X) += fixup-960x.o
+ 
+ ifdef CONFIG_PCI_MSI
+ obj-$(CONFIG_CAVIUM_OCTEON_SOC) += msi-octeon.o
+

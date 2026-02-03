@@ -26,6 +26,16 @@
 	status = "okay";
 };
 
+&pcie0 {
+	status = "okay";
+	reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>;
+};
+
+&pcie1 {
+	status = "okay";
+	reset-gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
+};
+
 &snand {
 	status= "okay";
 
