@@ -27,10 +27,11 @@ define Build/loader-cmdline-compile
 endef
 
 define Build/cvimg
-        $(STAGING_DIR_HOST)/bin/cvimg \
-                -i $@ \
-                -o $@.new \
-                $(1) && mv $@.new $@ || rm -f $@
+#        $(STAGING_DIR_HOST)/bin/cvimg \
+#                -i $@ \
+#                -o $@.new \
+#                $(1) && mv $@.new $@ || rm -f $@
+	true
 endef
 
 define Build/cvimg-kernel
@@ -168,6 +169,24 @@ define Device/RE708
   IMAGE/sysupgrade.bin = append-kernel | append-fake-rootfs | append-rootfs | cvimg-kernel | pad-rootfs
 endef
 TARGET_DEVICES += RE708
+
+define Device/RR10
+  $(Device/RealtekDTS)
+  BLOCKSIZE := 64k
+  DEVICE_DTS := RR-10
+  DEVICE_TITLE := RR-10
+#  SUPPORTED_DEVICES := re708v1 re708-v1
+  IMAGE_SIZE := 7936k
+  DEV_PROFILE := RR10
+#  CMDLINE := console=ttyS0,38400
+  KERNEL := kernel-bin | append-dtb | lzma | loader-cmdline-compile
+  CVIMG_KERNEL_BURN_ADDR := 0x30000
+  CVIMG_LOADER_START_ADDR := 0x81000000
+  IMAGES := factory.bin sysupgrade.bin
+  IMAGE/factory.bin = append-kernel | append-fake-rootfs | append-rootfs | cvimg-kernel | cvimg-pad-rootfs
+  IMAGE/sysupgrade.bin = append-kernel | append-fake-rootfs | append-rootfs | cvimg-kernel | pad-rootfs
+endef
+TARGET_DEVICES += RR10
 
 define Device/GWR1200AC
   $(Device/RealtekDTS)

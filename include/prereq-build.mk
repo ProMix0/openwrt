@@ -28,8 +28,8 @@ $(eval $(call TestHostCommand,proper-umask, \
 
 $(eval $(call SetupHostCommand,gcc, \
 	Please install the GNU C Compiler (gcc) 4.8 or later, \
-	$(CC) -dumpversion | grep -E '^(4\.[8-9]|[5-9]\.?|10\.?)', \
-	gcc -dumpversion | grep -E '^(4\.[8-9]|[5-9]\.?|10\.?)', \
+	$(CC) -dumpversion | grep -E '^([8-9]\.?|1[0-9]\.?)', \
+	gcc -dumpversion | grep -E '^([8-9]\.?|1[0-9]\.?)', \
 	gcc --version | grep -E 'Apple.(LLVM|clang)' ))
 
 $(eval $(call TestHostCommand,working-gcc, \
@@ -40,8 +40,8 @@ $(eval $(call TestHostCommand,working-gcc, \
 
 $(eval $(call SetupHostCommand,g++, \
 	Please install the GNU C++ Compiler (g++) 4.8 or later, \
-	$(CXX) -dumpversion | grep -E '^(4\.[8-9]|[5-9]\.?|10\.?)', \
-	g++ -dumpversion | grep -E '^(4\.[8-9]|[5-9]\.?|10\.?)', \
+	$(CXX) -dumpversion | grep -E '^([8-9]\.?|1[0-9]\.?)', \
+	g++ -dumpversion | grep -E '^([8-9]\.?|1[0-9]\.?)', \
 	g++ --version | grep -E 'Apple.(LLVM|clang)' ))
 
 $(eval $(call TestHostCommand,working-g++, \
@@ -144,14 +144,14 @@ $(eval $(call SetupHostCommand,python,Please install Python >= 3.5, \
 	python3.7 -V 2>&1 | grep 'Python 3', \
 	python3.6 -V 2>&1 | grep 'Python 3', \
 	python3.5 -V 2>&1 | grep 'Python 3', \
-	python3 -V 2>&1 | grep -E 'Python 3\.[5-9]\.?'))
+	python3 -V 2>&1 | grep -E 'Python 3\.([7-9]|[0-9][0-9])\.?'))
 
 $(eval $(call SetupHostCommand,python3,Please install Python >= 3.5, \
 	python3.8 -V 2>&1 | grep 'Python 3', \
 	python3.7 -V 2>&1 | grep 'Python 3', \
 	python3.6 -V 2>&1 | grep 'Python 3', \
 	python3.5 -V 2>&1 | grep 'Python 3', \
-	python3 -V 2>&1 | grep -E 'Python 3\.[5-9]\.?'))
+	python3 -V 2>&1 | grep -E 'Python 3\.([7-9]|[0-9][0-9])\.?'))
 
 $(eval $(call SetupHostCommand,git,Please install Git (git-core) >= 1.7.12.2, \
 	git --exec-path | xargs -I % -- grep -q -- --recursive %/git-submodule))

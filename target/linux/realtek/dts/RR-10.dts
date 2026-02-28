@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: GPL-2.0
+/dts-v1/;
+
+#include "RTL8197FVG.dtsi"
+
+/ {
+	compatible = "realtek,rtl8197f-soc";
+	model = "RR-10";
+
+	memory {
+		device_type = "memory";
+		reg = <0x0 0x8000000>;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200";
+		//bootargs = "console=ttyS0,115200 rootfstype=tmpfs";
+	};
+};
