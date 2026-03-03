@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 
+#include <dt-bindings/clock/rtl83xx-clk.h>
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/interrupt-controller/mips-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
-#include <dt-bindings/clock/rtl83xx-clk.h>
 
 / {
 	#address-cells = <1>;
@@ -269,6 +270,10 @@
 		};
 	};
 
+	range: gpio-range {
+		#pinctrl-single,gpio-range-cells = <3>;
+	};
+
 	pinmux: pinmux@1b000038 {
 		compatible = "pinctrl-single";
 		reg = <0x1b000038 0xc>;
@@ -277,6 +282,7 @@
 		pinctrl-single,register-width = <32>;
 		pinctrl-single,function-mask = <0x1>;
 		#pinctrl-cells = <2>;
+		pinctrl-single,gpio-range = <&range 39 40 1>;
 	};
 
 	thermal_zones: thermal-zones {
@@ -293,5 +299,47 @@
 				};
 			};
 		};
+	};
+
+	pci0: pci@18b00000 {
+		compatible = "realtek,pci-rtl960x";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		bus-range = <0x00 0xff>;
+		clocks = <&ccu CLK_CPU>;
+		device_type = "pci";
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SHARED 49 IRQ_TYPE_LEVEL_HIGH>;
+		ranges = <0x02000000 0 0 0x19000000 0 0x01000000>, /* pci memory */
+				 <0x01000000 0 0 0x18c00000 0 0x00010000>; /* io space */
+		reg = <0x18b00000 0x1000
+			   0x18b01000 0x1000
+			   0x18b10000 0x1000
+			   0x18b11000 0x1000>;
+		reg-names = "rc_cfg", "rc_ext", "dev_cfg0", "dev_cfg1";
+		reset-gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>; // TODO move to board .dts
+		slot-num = <0>;
+		port = <1>;
+	};
+
+	pci1: pci@18b20000 {
+		compatible = "realtek,pci-rtl960x";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		bus-range = <0x00 0xff>;
+		clocks = <&ccu CLK_CPU>;
+		device_type = "pci";
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SHARED 50 IRQ_TYPE_LEVEL_HIGH>;
+		ranges = <0x02000000 0 0 0xba000000 0 0x01000000>, /* pci memory */
+				 <0x01000000 0 0 0x18e00000 0 0x00010000>; /* io space */
+		reg = <0x18b20000 0x1000
+			   0x18b21000 0x1000
+			   0x18b30000 0x1000
+			   0x18b31000 0x1000>;
+		reg-names = "rc_cfg", "rc_ext", "dev_cfg0", "dev_cfg1";
+		reset-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>; // TODO move to board .dts
+		slot-num = <1>;
+		port = <0>;
 	};
 };

@@ -3,3 +3,4 @@
 #
 
 obj-y := setup.o prom.o
+obj-$(CONFIG_PCI) += pci.o
