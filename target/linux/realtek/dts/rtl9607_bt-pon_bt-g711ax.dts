@@ -19,6 +19,7 @@
 		led-upgrade = &led_power;
 	};
 
+#if 0
 	keys {
 		compatible = "gpio-keys";
 
@@ -43,6 +44,7 @@
 			linux,code = <BTN_0>;
 		};
 	};
+#endif
 
 	leds {
 		compatible = "gpio-leds";

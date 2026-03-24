@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 
+#include <dt-bindings/clock/rtl83xx-clk.h>
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/interrupt-controller/mips-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
-#include <dt-bindings/clock/rtl83xx-clk.h>
 
 / {
 	#address-cells = <1>;
@@ -90,6 +91,7 @@
 		#size-cells = <1>;
 		ranges = <0x0 0x18000000 0x20000>;
 
+#if 0
 		ip_en_rst: reset-controller@600 {
 			compatible = "snps,dw-low-reset";
 			#reset-cells = <1>;
@@ -101,6 +103,7 @@
 			#reset-cells = <1>;
 			reg = <0x63c 0x4>;
 		};
+#endif
 
 		ecc0: ecc@1a600 {
 			compatible = "realtek,rtl9301-ecc";
@@ -282,6 +285,14 @@
 		pinctrl-single,register-width = <32>;
 		pinctrl-single,function-mask = <0x1>;
 		#pinctrl-cells = <2>;
+
+		pinmux_pcie1_rst: pcie1-rst {
+			pinctrl-single,bits = <0x4 0x80 0x80>;
+		};
+
+		pinmux_pcie0_rst: pcie0-rst {
+			pinctrl-single,bits = <0x4 0x100 0x100>;
+		};
 	};
 
 	thermal_zones: thermal-zones {
@@ -298,5 +309,51 @@
 				};
 			};
 		};
+	};
+
+	pci0: pci@18b00000 {
+		compatible = "realtek,pci-rtl960x";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		bus-range = <0x00 0xff>;
+		clocks = <&ccu CLK_CPU>;
+		device_type = "pci";
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SHARED 49 IRQ_TYPE_LEVEL_HIGH>;
+		ranges = <0x02000000 0 0 0x19000000 0 0x01000000>, /* pci memory */
+				 <0x01000000 0 0 0x18c00000 0 0x00010000>; /* io space */
+		reg = <0x18b00000 0x1000
+			   0x18b01000 0x1000
+			   0x18b10000 0x1000
+			   0x18b11000 0x1000>;
+		reg-names = "rc_cfg", "rc_ext", "dev_cfg0", "dev_cfg1";
+		reset-gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>; // TODO move to board .dts
+		slot-num = <0>;
+		port = <1>;
+		pinctrl-0 = <&pinmux_pcie1_rst>;
+		pinctrl-names = "default";
+	};
+
+	pci1: pci@18b20000 {
+		compatible = "realtek,pci-rtl960x";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		bus-range = <0x00 0xff>;
+		clocks = <&ccu CLK_CPU>;
+		device_type = "pci";
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SHARED 50 IRQ_TYPE_LEVEL_HIGH>;
+		ranges = <0x02000000 0 0 0xba000000 0 0x01000000>, /* pci memory */
+				 <0x01000000 0 0 0x18e00000 0 0x00010000>; /* io space */
+		reg = <0x18b20000 0x1000
+			   0x18b21000 0x1000
+			   0x18b30000 0x1000
+			   0x18b31000 0x1000>;
+		reg-names = "rc_cfg", "rc_ext", "dev_cfg0", "dev_cfg1";
+		reset-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>; // TODO move to board .dts
+		slot-num = <1>;
+		port = <0>;
+		pinctrl-0 = <&pinmux_pcie0_rst>;
+		pinctrl-names = "default";
 	};
 };
