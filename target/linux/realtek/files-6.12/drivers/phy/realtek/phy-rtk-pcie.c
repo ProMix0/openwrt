@@ -12,6 +12,35 @@
 #include <linux/phy/phy.h>
 #include <linux/reset.h>
 
+struct phy_data {
+	u8 addr;
+	u16 data;
+};
+
+#define MY_DEFINE 0
+
+/* PCIE0 Rev B PHY parameters (GEN1) */
+static const struct phy_data pcie0_phy_params_revb[] = {
+	{ 0x00, 0x4008 }, { 0x01, 0xa812 }, { 0x02, 0x6042 }, { 0x04, 0x5000 },
+	{ 0x05, 0x230a }, { 0x06, 0x0011 }, { 0x09, 0x520c }, { 0x0a, 0xc670 },
+	{ 0x0b, 0xb905 }, { 0x0d, 0xef16 }, { 0x0e, 0x0000 }, { 0x20, 0x9499 },
+	{ 0x21, 0x66aa }, { 0x27, 0x011a },
+	{ 0x09, 0x500c }, { 0x09, 0x520c },
+	{ 0x40, 0x4008 }, { 0x41, 0xa811 }, { 0x42, 0x6042 }, { 0x44, 0x5000 },
+	{ 0x45, 0x230a }, { 0x46, 0x0011 }, { 0x4a, 0xc670 }, { 0x4b, 0xb905 },
+	{ 0x4d, 0xef16 }, { 0x4e, 0x0000 }, { 0x4f, 0x000c }, { 0x60, 0x94aa },
+	{ 0x61, 0x88ff }, { 0x62, 0x0093 }, { 0x67, 0x011a }, { 0x6f, 0x65bd },
+	{ 0x49, 0x500c }, { 0x49, 0x520c },
+};
+
+/* PCIE1 Rev B PHY parameters (GEN1) */
+static const struct phy_data pcie1_phy_params_revb[] = {
+	{ 0x00, 0x8a50 }, { 0x02, 0x26f9 }, { 0x03, 0x6bcd }, { 0x04, 0x8049 },
+	{ 0x06, 0x1088 }, { 0x07, 0x52b3 }, { 0x08, 0x5285 }, { 0x09, 0x6300 },
+	{ 0x0b, 0x0009 }, { 0x0c, 0x0800 }, { 0x0e, 0x0093 }, { 0x20, 0x0105 },
+	{ 0x21, 0x1000 },
+};
+
 #define PCIE_MDIO_CTRL_PHY_WRITE	BIT(0)
 #define PCIE_MDIO_CTRL_PHY_ADDR_SHIFT	8
 #define PCIE_MDIO_CTRL_PHY_DATA_SHIFT	16
@@ -34,14 +63,13 @@
 #define PHY_ADDR_MAP_ARRAY_INDEX(addr)	(addr)
 #define ARRAY_INDEX_MAP_PHY_ADDR(index)	(index)
 
-struct phy_data {
-	u8 addr;
-	u16 data;
-};
-
 struct phy_cfg {
 	int param0_size;
+#if MY_DEFINE
+	const struct phy_data *param0;
+#else
 	struct phy_data param0[MAX_PCIE_PHY_DATA_SIZE];
+#endif
 	int param1_size;
 	struct phy_data param1[MAX_PCIE_PHY_DATA_SIZE];
 	bool do_toggle;
@@ -58,19 +86,21 @@ struct rtk_phy {
 	struct reset_control *phy_rst;
 };
 
-static int rtk_phy_write(struct rtk_phy *rtk_phy, u8 addr, u16 data)
+static void rtk_phy_write(struct rtk_phy *rtk_phy, u8 addr, u16 data)
 {
 	u32 val;
+	// TODO without printk (delays)
+//				       printk("0x%x: 0x%x\n", addr,data);
 
 	val = PCIE_MDIO_CTRL_PHY_WRITE |
 	(addr << PCIE_MDIO_CTRL_PHY_ADDR_SHIFT) |
 	(data << PCIE_MDIO_CTRL_PHY_DATA_SHIFT);
 
 	writel(val, rtk_phy->reg_mdio_ctrl);
-
-	return 0;
+	mdelay(1);
 }
 
+#if !MY_DEFINE
 static void do_rtk_pcie_phy_toggle(struct rtk_phy *rtk_phy, bool param1)
 {
 	struct phy_cfg *phy_cfg = rtk_phy->phy_cfg;
@@ -95,9 +125,10 @@ static void do_rtk_pcie_phy_toggle(struct rtk_phy *rtk_phy, bool param1)
 	data = phy_data->data;
 
 	rtk_phy_write(rtk_phy, addr, data & (~REG_0X09_FORCE_CALIBRATION));
-	mdelay(1);
+//	mdelay(1);
 	rtk_phy_write(rtk_phy, addr, data | REG_0X09_FORCE_CALIBRATION);
 }
+#endif
 
 static int rtk_phy_init(struct phy *phy)
 {
@@ -132,6 +163,7 @@ static int rtk_phy_init(struct phy *phy)
 
 	mdelay(50);
 
+#if !MY_DEFINE
 	/* Set param 0 */
 	for (i = 0; i < phy_cfg->param0_size; i++) {
 		struct phy_data *phy_data = phy_cfg->param0 + i;
@@ -168,6 +200,17 @@ static int rtk_phy_init(struct phy *phy)
 		/* toggle for param1 */
 		do_rtk_pcie_phy_toggle(rtk_phy, true);
 	}
+	mdelay(20);
+#else
+printk("count: %d\n", phy_cfg->param0_size);
+	for (i = 0; i < phy_cfg->param0_size; i++){
+		rtk_phy_write(rtk_phy, phy_cfg->param0[i].addr,
+				       phy_cfg->param0[i].data);
+				       printk("0x%x: 0x%x\n", phy_cfg->param0[i].addr,
+				       phy_cfg->param0[i].data);
+				       }
+	mdelay(20);
+#endif
 
 	return 0;
 }
@@ -238,6 +281,7 @@ static int rtk_pciephy_probe(struct platform_device *pdev)
 
 
 static const struct phy_cfg rtl9607_revB_phy_cfg0 = {
+#if !MY_DEFINE
 	.param0_size = MAX_PCIE_PHY_DATA_SIZE,
 	.param0 = {  [1] = {0x01, 0xa852},
 		     [6] = {0x06, 0x0017},
@@ -271,12 +315,14 @@ static const struct phy_cfg rtl9607_revB_phy_cfg0 = {
 		    [41] = {0x29, 0xf0f3},
 		    [43] = {0x2b, 0xa0a1},
 		    [47] = {0x2f, 0x5046}, },
+#endif
 	.do_toggle = true,
 	.reset_bit = PCIE_PHY_CTRL_MDRST0,
 	.disable_bit = PCIE_PHY_CTRL_DIS0,
 };
 
 static const struct phy_cfg rtl9607_revB_phy_cfg1 = {
+#if !MY_DEFINE
 	.param0_size = MAX_PCIE_PHY_DATA_SIZE,
 	.param0 = {  [1] = {0x01, 0xa852},
 		     [6] = {0x06, 0x0017},
@@ -296,12 +342,14 @@ static const struct phy_cfg rtl9607_revB_phy_cfg1 = {
 		    [43] = {0x2b, 0xa0a1}, },
 	.param1_size = 0,
 	.param1 = { /* no parameter */ },
+#endif
 	.do_toggle = true,
 	.reset_bit = PCIE_PHY_CTRL_MDRST1,
 	.disable_bit = PCIE_PHY_CTRL_DIS1,
 };
 
 static const struct phy_cfg rtl9607_revA_phy_cfg0 = {
+#if !MY_DEFINE
 	.param0_size = MAX_PCIE_PHY_DATA_SIZE,
 	.param0 = {  [0] = {0x00, 0x4008},
 		     [1] = {0x01, 0xa812},
@@ -330,26 +378,31 @@ static const struct phy_cfg rtl9607_revA_phy_cfg0 = {
 		    [13] = {0x0d, 0xef16},
 		    [14] = {0x0e, 0x0000},
 		    [15] = {0x0f, 0x000c},
-		    [27] = {0x1b, 0xaea1},
-		    [30] = {0x1e, 0x28eb},
+//		    [27] = {0x1b, 0xaea1},// WTF is that?
+//		    [30] = {0x1e, 0x28eb},//
 		    [32] = {0x20, 0x94aa},
 		    [33] = {0x21, 0x88ff},
 		    [34] = {0x22, 0x0093},
 		    [39] = {0x27, 0x011a},
 		    [47] = {0x2f, 0x65bd}, },
+#else
+	.param0 = pcie0_phy_params_revb,
+	.param0_size = ARRAY_SIZE(pcie0_phy_params_revb),
+#endif
 	.do_toggle = true,
 	.reset_bit = PCIE_PHY_CTRL_MDRST0,
 	.disable_bit = PCIE_PHY_CTRL_DIS0,
 };
 
 static const struct phy_cfg rtl9607_revA_phy_cfg1 = {
+#if !MY_DEFINE
 	.param0_size = MAX_PCIE_PHY_DATA_SIZE,
 	.param0 = {  [0] = {0x00, 0x8a50},
 		     [2] = {0x02, 0x26f9},
 		     [3] = {0x03, 0x6bcd},
 		     [4] = {0x04, 0x8049},
 		     [6] = {0x06, 0x1088},
-		     [7] = {0x06, 0x52b3},
+		     [7] = {0x07, 0x52b3},
 		     [8] = {0x08, 0x5285},
 		     [9] = {0x09, 0x6300},
 		    [11] = {0x0b, 0x0009},
@@ -359,6 +412,10 @@ static const struct phy_cfg rtl9607_revA_phy_cfg1 = {
 		    [33] = {0x21, 0x1000}, },
 	.param1_size = 0,
 	.param1 = { /* no parameter */ },
+#else
+	.param0 = pcie1_phy_params_revb,
+	.param0_size = ARRAY_SIZE(pcie1_phy_params_revb),
+#endif
 	.do_toggle = false,
 	.reset_bit = PCIE_PHY_CTRL_MDRST1,
 	.disable_bit = PCIE_PHY_CTRL_DIS1,

@@ -298,7 +298,7 @@
 	};
 
 	pcie0_phy: phy@18b21000 {
-		compatible = "realtek,rtl9607-revB-pciephy0";
+		compatible = "realtek,rtl9607-revA-pciephy0";
 		reg = <0x18b21000 0xc>;
 		#phy-cells = <0>;
 		realtek,pcie-misc = <&pcie_misc>;
@@ -307,7 +307,7 @@
 	};
 
 	pcie1_phy: phy@18b01000 {
-		compatible = "realtek,rtl9607-revB-pciephy1";
+		compatible = "realtek,rtl9607-revA-pciephy1";
 		reg = <0x18b01000 0xc>;
 		#phy-cells = <0>;
 		realtek,pcie-misc = <&pcie_misc>;
