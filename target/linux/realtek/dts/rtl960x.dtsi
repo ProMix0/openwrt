@@ -246,6 +246,19 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
+		ethernet0: ethernet {
+			compatible = "realtek,rtl9607c-eth";
+			interrupt-parent = <&intc>;
+			interrupts = <GIC_SHARED 36 IRQ_TYPE_LEVEL_HIGH>, <GIC_SHARED 37 IRQ_TYPE_LEVEL_HIGH>;
+			#interrupt-cells = <1>;
+			phy-mode = "internal";
+
+			fixed-link {
+				speed = <1000>;
+				full-duplex;
+			};
+		};
+
 		i2c_mst1: i2c@b4 {
 			compatible = "realtek,rtl9607-i2c";
 			reg = <0xb4 0x4>;
