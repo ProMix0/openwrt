@@ -1,0 +1,8 @@
+//8192XBR RFE94 version = 29
+//RTC7663
+
+
+0xFD	0x09429
+
+
+0xffff 0xffff 			

@@ -1,0 +1,813 @@
+menuconfig RTLWIFI6
+	tristate "Realtek PCIE WiFi6"
+	depends on PCIE || PCI
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	help
+	  Help message of RTLWIFI6
+
+if RTLWIFI6
+
+menu "Realtek PCIE WiFi6 Chip"
+	config RTL8852AE
+	bool "RTL8852AE"
+
+	config RTL8852CE
+	bool "RTL8852CE"
+
+	config RTL8852DE
+	bool "RTL8852DE"
+
+	config RTL8832BR
+	bool "RTL8832BR"
+	
+	config RTL8832BRH
+	bool "RTL8832BRH"
+
+	config RTL8192XB
+	bool "RTL8192XB"
+endmenu
+
+config RTW_LINK_PHL_MASTER
+	bool "Link to phl master branch"
+	default n
+	help
+	  During updating changes to phl master. Some code needs to be disabled 
+	  before corresponding PHL changed commited to PHL.
+
+config RTW_DRV_HAS_NVM
+	bool "Driver to support system NVM instead efuse"
+	default y
+	help
+	   System's NVM, instead of wifi chip's efuse, stores MP calibration
+	   values and system configuration.
+
+config RTW_PERSIST_IF
+	bool "Persist interface"
+	default n
+	help
+	  Once virtual interface is created, it remain alive until primary one is deleted.
+
+config LIMITED_AP_NUM
+	int "AP interface number"
+	range 1 14
+	default 6
+	help
+	  Maximum number of AP interface the Realtek Wifi6 driver to support
+
+source "drivers/net/wireless/realtek/g6_wifi_driver/Kconfig.wfo"
+
+config 2G_ON_WLAN0
+	bool "Config 2.4G on wlan0 & 5G on wlan1"
+	depends on PCIE || PCI
+	default n
+	help
+	  Help message of RTLWIFI6
+
+config 2G_ON_PCIE_SLOT0
+	bool "Config 2.4G on pcie slot 0 & 5G on pcie slot 1"
+	depends on PCIE || PCI
+	default n
+	help
+	  Help message of RTLWIFI6
+
+config AX_SHARE_XTAL
+	bool "AX shared crystal config"
+	default n
+	help
+	  Device is shared crystal
+choice
+	prompt "shared crystal type"
+	depends on AX_SHARE_XTAL
+
+	config WLAN_SHARE_XTAL
+	bool "Wlan interfaces share xtal"
+
+	config SOC_SHARE_XTAL
+	bool "Wlan interface shares xtal with SOC"
+
+endchoice
+
+config DMA_NONCOHERENT
+     bool "Realtek WiFi non-cherent DMA"
+     default n
+     help
+       Realtek Wlan device support non-cherent DMA.
+
+config RTL_WIFI_OFFLOAD
+	bool "Realtek WiFi offload support"
+	default n
+	help
+	  Support Realtek WiFi Offload Engine
+
+config PON_VW_FULL_MEM
+	bool "PON TC/VW full load memory support"
+	depends on RTL_WIFI_OFFLOAD
+	default n
+	help
+	  Support PON TC/VW full load memory
+
+config RTL_WFO_DUAL_BAND
+	bool "Realtek WiFi offload dual band support"
+	depends on RTL_WIFI_OFFLOAD
+	default n
+	help
+	  Support Realtek WiFi offload engine for dual band
+
+config RTW_DEV_IS_SINGLE_BAND
+	bool "Wlan device is single band"
+	default y
+	help
+	  Realtek Wlan device is designed for either 2.4G or 5G band.
+
+config RTW_2_4G_DEV
+	string "PCI device's name of 2.4G band" if RTW_DEV_IS_SINGLE_BAND
+	default "0000:02:01.0"
+	help
+	  PCI device name that supports 2.4G band. Default value is set for 98D reference board design.
+
+config MP_INCLUDED
+	bool "Realtek PCIE WiFi MP Mode"
+	depends on PCIE || PCI
+	default y
+	help
+	  Help message of RTLWIFI6
+
+config PHL_TEST_SUITE
+	bool "Realtek PCIE WiFi MP Test Suite"
+	depends on MP_INCLUDED
+	default y
+	help
+	  Help message of RTLWIFI6
+
+config MP_CONFIG_FOR_AP
+	bool "Enable config setting for AP's MP mode"
+	depends on MP_INCLUDED
+	default y
+	help
+	  Help message of RTLWIFI6
+
+# RFE type config
+
+config LOAD_PHY_PARA_FROM_MODULE_PARA
+	bool "Load RFE Type and FEM name from module parameters"
+	default n
+	help
+	  Help message of RTLWIFI6
+
+if !LOAD_PHY_PARA_FROM_MODULE_PARA
+choice
+	prompt "RFE Type for WLAN0"
+	default WLAN0_RFE_TYPE_50
+
+	config WLAN0_RFE_TYPE_50
+	bool "Type 50"
+
+	config WLAN0_RFE_TYPE_51
+	bool "Type 51"
+
+	config WLAN0_RFE_TYPE_52
+	bool "Type 52"
+
+	config WLAN0_RFE_TYPE_53
+	bool "Type 53"
+
+	config WLAN0_RFE_TYPE_54
+	bool "Type 54"
+
+	config WLAN0_RFE_TYPE_94
+	bool "Type 94"
+endchoice
+
+# WLAN0 extension para config for eFEM
+choice
+	prompt "FEM Type for WLAN0"
+		default WLAN0_AP_5G
+		depends on WLAN0_RFE_TYPE_50 || WLAN0_RFE_TYPE_51 || WLAN0_RFE_TYPE_52 || WLAN0_RFE_TYPE_53 || WLAN0_RFE_TYPE_54 || WLAN0_RFE_TYPE_94
+
+		config WLAN0_AP_5G
+		bool "AP (5G)"
+		depends on WLAN0_RFE_TYPE_50
+
+		config WLAN0_AP_2G
+		bool "AP (2G)"
+		depends on WLAN0_RFE_TYPE_50
+if RTL8852AE
+		config WLAN0_FEM_VC5333
+		bool "VC5333 (2G)"
+		depends on WLAN0_RFE_TYPE_51
+
+		config WLAN0_FEM_SKY85333
+		bool "SKY85333 (2G)"
+		depends on WLAN0_RFE_TYPE_51
+
+		config WLAN0_FEM_SKY85747
+		bool "SKY85747 (5G)"
+		depends on WLAN0_RFE_TYPE_51
+
+		config WLAN0_FEM_RTC66204
+		bool "RTC66204 (2G)"
+		depends on WLAN0_RFE_TYPE_52
+
+		config WLAN0_FEM_RTC66504
+		bool "RTC66504 (5G)"
+		depends on WLAN0_RFE_TYPE_52
+
+		config WLAN0_FEM_KCT8575HE
+		bool "KCT8575HE"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_RTC7676E
+		bool "RTC7676E"
+		depends on WLAN0_RFE_TYPE_54
+endif
+
+if RTL8852CE
+		config WLAN0_FEM_SKY85791
+		bool "SKY85791 (8852CRe)"
+		depends on WLAN0_RFE_TYPE_51
+
+		config WLAN0_FEM_KTC8570N
+		bool "KTC8570N (8852CRe)"
+		depends on WLAN0_RFE_TYPE_51
+
+		config WLAN0_FEM_RTC66506
+		bool "RTC66506 (8852CRe)"
+		depends on WLAN0_RFE_TYPE_52
+
+		config WLAN0_FEM_KCT8575HP
+		bool "KCT8575HP (8852CRe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_KCT8539HE
+		bool "KCT8539HE (8852CRe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_KCT8531HE
+		bool "KCT8531HE (8852CRe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_SKY85755_MSTC
+		bool "SKY85755_MSTC (8852CRe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_FX7555D_PON
+		bool "FX7555D_PON (8852CRe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_RTC7676D
+		bool "RTC7676D (8852CRe)"
+		depends on WLAN0_RFE_TYPE_54
+
+		config WLAN0_FEM_RTC7676D_08U
+		bool "RTC7676D_08U (8852CRe)"
+		depends on WLAN0_RFE_TYPE_54
+
+		config WLAN0_FEM_RTC7676D1
+		bool "RTC7676D1 (8852CRe)"
+		depends on WLAN0_RFE_TYPE_54
+
+		config WLAN0_FEM_RTK66587_DPX
+		bool "RTK66587_DPX (8852CRe)"
+		depends on WLAN0_RFE_TYPE_54
+
+		config WLAN0_FEM_RTK66587_BPF
+		bool "RTK66587_BPF (8852CRe)"
+		depends on WLAN0_RFE_TYPE_54
+endif
+
+if RTL8832BRH
+		config WLAN0_FEM_SKY85791
+		bool "SKY85791 (8832BRHe)"
+		depends on WLAN0_RFE_TYPE_51
+
+		config WLAN0_FEM_KTC8570N
+		bool "KTC8570N (8832BRHe)"
+		depends on WLAN0_RFE_TYPE_51
+
+		config WLAN0_FEM_RTC66506
+		bool "RTC66506 (8832BRHe)"
+		depends on WLAN0_RFE_TYPE_52
+
+		config WLAN0_FEM_KCT8575HP
+		bool "KCT8575HP (8832BRHe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_KCT8539HE
+		bool "KCT8539HE (8832BRHe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_RTC7676D
+		bool "RTC7676D (8832BRHe)"
+		depends on WLAN0_RFE_TYPE_54
+
+		config WLAN0_FEM_RTC7676D_08U
+		bool "RTC7676D_08U (8832BRHe)"
+		depends on WLAN0_RFE_TYPE_54
+
+		config WLAN0_FEM_RTC7676D1
+		bool "RTC7676D1 (8832BRHe)"
+		depends on WLAN0_RFE_TYPE_54
+endif
+
+if RTL8192XB
+		config WLAN0_FEM_SKY85340
+		bool "SKY85340 (8192XBe)"
+		depends on WLAN0_RFE_TYPE_51
+
+		config WLAN0_FEM_VC5337
+		bool "VC5337 (8192XBe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_KCT8239SD
+		bool "KCT8239SD (8192XBe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_SKY85337_MSTC
+		bool "SKY85337_MSTC (8192XBe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_FX7237D_PON
+		bool "FX7237D_PON (8192XBe)"
+		depends on WLAN0_RFE_TYPE_53
+
+		config WLAN0_FEM_RTC7646
+		bool "RTC7646 (8192XBe)"
+		depends on WLAN0_RFE_TYPE_54
+
+		config WLAN0_FEM_RTK66287
+		bool "RTK66287 (8192XBe)"
+		depends on WLAN0_RFE_TYPE_54
+
+		config WLAN0_FEM_RTC7663
+		bool "RTC7663 (8192XBe)"
+		depends on WLAN0_RFE_TYPE_94
+endif
+endchoice
+
+
+choice
+	prompt "RFE Type for WLAN1"
+	default WLAN1_RFE_TYPE_50
+
+	config WLAN1_RFE_TYPE_50
+	bool "Type 50"
+
+	config WLAN1_RFE_TYPE_51
+	bool "Type 51"
+
+	config WLAN1_RFE_TYPE_52
+	bool "Type 52"
+
+	config WLAN1_RFE_TYPE_53
+	bool "Type 53"
+
+	config WLAN1_RFE_TYPE_54
+	bool "Type 54"
+
+	config WLAN1_RFE_TYPE_94
+	bool "Type 94"
+endchoice
+
+# WLAN1 extension para config for eFEM
+choice
+	prompt "FEM Type for WLAN1"
+		default WLAN1_AP_2G
+		depends on WLAN1_RFE_TYPE_50 || WLAN1_RFE_TYPE_51 || WLAN1_RFE_TYPE_52 || WLAN1_RFE_TYPE_53 || WLAN1_RFE_TYPE_54 || WLAN1_RFE_TYPE_94
+
+		config WLAN1_AP_5G
+		bool "AP (5G)"
+		depends on WLAN1_RFE_TYPE_50
+
+		config WLAN1_AP_2G
+		bool "AP (2G)"
+		depends on WLAN1_RFE_TYPE_50
+if RTL8852AE
+		config WLAN1_FEM_VC5333
+		bool "VC5333 (2G)"
+		depends on WLAN1_RFE_TYPE_51
+
+		config WLAN1_FEM_SKY85333
+		bool "SKY85333 (2G)"
+		depends on WLAN1_RFE_TYPE_51
+
+		config WLAN1_FEM_SKY85747
+		bool "SKY85747 (5G)"
+		depends on WLAN1_RFE_TYPE_51
+
+		config WLAN1_FEM_RTC66204
+		bool "RTC66204 (2G)"
+		depends on WLAN1_RFE_TYPE_52
+
+		config WLAN1_FEM_RTC66504
+		bool "RTC66504 (5G)"
+		depends on WLAN1_RFE_TYPE_52
+
+		config WLAN1_FEM_KCT8575HE
+		bool "KCT8575HE"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_RTC7676E
+		bool "RTC7676E"
+		depends on WLAN1_RFE_TYPE_54
+endif
+
+if RTL8852CE
+		config WLAN1_FEM_SKY85791
+		bool "SKY85791 (8852CRe)"
+		depends on WLAN1_RFE_TYPE_51
+
+		config WLAN1_FEM_KTC8570N
+		bool "KTC8570N (8852CRe)"
+		depends on WLAN1_RFE_TYPE_51
+
+		config WLAN1_FEM_RTC66506
+		bool "RTC66506 (8852CRe)"
+		depends on WLAN1_RFE_TYPE_52
+
+		config WLAN1_FEM_KCT8575HP
+		bool "KCT8575HP (8852CRe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_KCT8539HE
+		bool "KCT8539HE (8852CRe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_KCT8531HE
+		bool "KCT8531HE (8852CRe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_SKY85755_MSTC
+		bool "SKY85755_MSTC (8852CRe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_FX7555D_PON
+		bool "FX7555D_PON (8852CRe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_RTC7676D
+		bool "RTC7676D (8852CRe)"
+		depends on WLAN1_RFE_TYPE_54
+
+		config WLAN1_FEM_RTC7676D_08U
+		bool "RTC7676D_08U (8852CRe)"
+		depends on WLAN1_RFE_TYPE_54
+
+		config WLAN1_FEM_RTC7676D1
+		bool "RTC7676D1 (8852CRe)"
+		depends on WLAN1_RFE_TYPE_54
+
+		config WLAN1_FEM_RTK66587_DPX
+		bool "RTK66587_DPX (8852CRe)"
+		depends on WLAN1_RFE_TYPE_54
+
+		config WLAN1_FEM_RTK66587_BPF
+		bool "RTK66587_BPF (8852CRe)"
+		depends on WLAN1_RFE_TYPE_54
+endif
+
+if RTL8832BRH
+		config WLAN1_FEM_SKY85791
+		bool "SKY85791 (8832BRHe)"
+		depends on WLAN1_RFE_TYPE_51
+
+		config WLAN1_FEM_KTC8570N
+		bool "KTC8570N (8832BRHe)"
+		depends on WLAN1_RFE_TYPE_51
+
+		config WLAN1_FEM_RTC66506
+		bool "RTC66506 (8832BRHe)"
+		depends on WLAN1_RFE_TYPE_52
+
+		config WLAN1_FEM_KCT8575HP
+		bool "KCT8575HP (8832BRHe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_KCT8539HE
+		bool "KCT8539HE (8832BRHe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_RTC7676D
+		bool "RTC7676D (8832BRHe)"
+		depends on WLAN1_RFE_TYPE_54
+
+		config WLAN1_FEM_RTC7676D_08U
+		bool "RTC7676D_08U (8832BRHe)"
+		depends on WLAN1_RFE_TYPE_54
+
+		config WLAN1_FEM_RTC7676D1
+		bool "RTC7676D1 (8832BRHe)"
+		depends on WLAN1_RFE_TYPE_54
+endif
+
+if RTL8192XB
+		config WLAN1_FEM_SKY85340
+		bool "SKY85340 (8192XBe)"
+		depends on WLAN1_RFE_TYPE_51
+
+		config WLAN1_FEM_VC5337
+		bool "VC5337 (8192XBe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_KCT8239SD
+		bool "KCT8239SD (8192XBe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_FX7237D_PON
+		bool "FX7237D_PON (8192XBe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_SKY85337_MSTC
+		bool "SKY85337_MSTC (8192XBe)"
+		depends on WLAN1_RFE_TYPE_53
+
+		config WLAN1_FEM_RTC7646
+		bool "RTC7646 (8192XBe)"
+		depends on WLAN1_RFE_TYPE_54
+
+		config WLAN1_FEM_RTK66287
+		bool "RTK66287 (8192XBe)"
+		depends on WLAN1_RFE_TYPE_54
+
+		config WLAN1_FEM_RTC7663
+		bool "RTC7663 (8192XBe)"
+		depends on WLAN1_RFE_TYPE_94
+endif
+
+endchoice
+endif
+
+config RTW_EFEM_IDENTIFY_WITH_FLASH
+	bool "Enable WiFi-EFEM Identify With Flash Setting"
+        default n
+	help
+            Help message of RTLWIFI6
+
+config 24G_256QAM
+	bool "Enable 256 QAM on 2.4G"
+        default y
+
+config RTW_80211W_SUPPORT
+	bool "Enable WiFi6 80211W"
+        default y
+
+config WIFI6_WPA3
+	bool "Enable WiFi6 WPA3"
+        default y
+
+config RTW_CLIENT_MODE_SUPPORT
+        bool "Client Mode Support"
+        depends on PCIE || PCI
+        default n
+        help
+          Help message of RTLWIFI6
+
+config RTW_REPEATER_MODE_SUPPORT
+        bool "Repeater Mode Support"
+        depends on PCIE || PCI
+	select RTW_CLIENT_MODE_SUPPORT
+        default n
+        help
+          Help message of RTLWIFI6
+
+config RTW_A4_STA
+    bool "A4_STA support"
+    default n
+    help
+        Help message of RTLWIFI6
+
+config APPEND_VENDOR_IE_ENABLE
+    bool
+
+config WLAN_EVENT_INDICATE_GENL
+    bool
+
+config RTK_WLAN_EVENT_INDICATE
+	bool "Wlan event indicate support"
+	depends on !WLAN_EVENT_INDICATE_GENL
+	default n
+	help
+	    Help message of RTLWIFI6
+
+config RTW_SBWC 
+	bool "station bandwidth control support"
+	default n
+	help
+	    Help message of RTLWIFI6
+
+config RTW_GBWC
+	bool "group bandwidth control support"
+	default n
+	help
+	    Help message of RTLWIFI6
+
+config AP_NEIGHBOR_INFO
+        bool "Wlan ap neighbor info support"
+        default n
+        help
+            Help message of RTLWIFI6
+
+config RTW_CURRENT_RATE_ACCOUNTING
+        bool "current_rate_accounting_support"
+        default n
+        help
+            Help message of RTLWIFI6
+
+config ETHER_PKT_AGG
+	bool "Ethernet aggregatets packet support"
+	default n
+	help
+	    Ethernet aggregates packet via PE
+
+config RTW_BYPASS_DEAMSDU
+	bool "Bypass de-AMSDU support"
+	default n
+
+config RTW_MULTI_AP
+	bool "Multi-AP Support"
+	select RTW_A4_STA
+	select RTW_CLIENT_MODE_SUPPORT
+	select RTW_80211K
+	select RTW_80211V
+	default n
+	help
+	    Help message of RTLWIFI6
+
+config RTW_MULTI_AP_R1
+	depends on RTW_MULTI_AP
+	bool "Muti-AP Profile 1"
+	default y
+
+config RTW_MULTI_AP_R2
+	depends on RTW_MULTI_AP
+	bool "Muti-AP Profile 2"
+	select RTW_MULTI_AP_R1
+
+config RTW_MULTI_AP_R3
+	depends on RTW_MULTI_AP
+	bool "Muti-AP Profile 3"
+	select RTW_MULTI_AP_R2
+
+config RTW_MULTI_AP_R4
+	depends on RTW_MULTI_AP
+	bool "Muti-AP Profile 4"
+	select RTW_MULTI_AP_R3
+
+config RTW_MULTI_AP_R5
+	depends on RTW_MULTI_AP
+	bool "Muti-AP Profile 5"
+	select RTW_MULTI_AP_R4
+
+config RTW_MULTI_AP_LOGO
+	bool "Multi-AP Logo Mode"
+	depends on RTW_MULTI_AP
+	default n
+
+config NSB_MULTI_AP_EVENT
+    depends on RTW_MULTI_AP
+    bool "NSB multi-ap event support"
+    default n
+
+config QOS_MANAGEMENT
+	bool "QoS Management"
+	default n
+
+config RTW_80211K
+    bool "802.11K Support"
+    default n
+    help
+        Help message of RTLWIFI6
+
+config RTW_80211V
+    bool "802.11V Support"
+    default n
+    help
+        Help message of RTLWIFI6
+
+config RTW_80211R
+    bool "802.11R Support"
+    default n
+    help
+        Help message of RTLWIFI6
+
+config RTW_OWE
+    bool "OWE Support"
+    default y
+    help
+	Help message of RTLWIFI6
+
+config WLAN_MANAGER
+	bool "Realtek 8852A WLAN Manager support"
+	default n
+	help
+	  Help message of RTLWIFI6
+
+config BAND_STEERING
+	bool "Realtek 8852A Band Steering suuport"
+	default n
+	select WLAN_MANAGER
+	help
+	  Help message of RTLWIFI6
+config RTW_CROSSBAND_REPEATER_SUPPORT
+	bool "Realtek 8852A crossband repeater support"
+	default n
+	select WLAN_MANAGER
+	help
+	  Help message of RTLWIFI6
+
+config RTW_COMMON_NETLINK
+	bool "Common Netlink Support"
+	default n
+	select RTW_MULTI_AP
+	select WLAN_MANAGER
+	help
+	  Help message of RTLWIFI6
+
+config RECORD_CLIENT_HOST
+	bool "Record client host support"
+        default n
+	help
+            Help message of RTLWIFI6
+
+config RTW_BL_FASTCON_HOOK
+	bool "CMCC blink fast connect"
+	default n
+	help
+		Help message of RTLWIFI6
+
+config RTW_SSID_PRIORITY
+	bool "ssid priority support"
+	default n
+        help
+            Help message of RTLWIFI6
+
+config CTC_FEATURE
+	bool "Realtek 8852A CTC feature support"
+	select WLAN_EVENT_INDICATE_GENL
+	select APPEND_VENDOR_IE_ENABLE
+	default n
+	help
+		Help message of RTLWIFI6
+
+config CMCC_FEATURE
+	bool "Realtek wifi6 CMCC feature support"
+	select WLAN_EVENT_INDICATE_GENL
+	default n
+	help
+		Help message of RTLWIFI6
+
+config RTW_OPCLASS_CHANNEL_SCAN
+        bool "Wlan opClass channel scan"
+        default n
+        help
+            Help message of RTLWIFI6
+
+config RTW_DE_SUPPORT
+        bool "Data Element driver support"
+        default n
+        help
+            Support Wi-Fi Alliance Data Element in driver
+
+config RTL_CFG80211_WAPI_SUPPORT
+	bool "RTL cfg80211 WAPI support"
+	default n
+
+config WIFI_LED_SHARE_WITH_WPS
+	bool "WiFi LED share with WPS"
+        default n
+	help
+            Help message of RTLWIFI6
+
+config RTW_SW_LED_SHARED
+	bool "Wifi shared LED support"
+	default n
+	help
+		Help message of RTLWIFI6
+
+choice
+	prompt "Share which Wi-Fi LED"
+	depends on RTW_SW_LED_SHARED
+	default RTW_SW_LED_SHARED_USING_2G
+	help
+		Help message of RTLWIFI6
+
+config RTW_SW_LED_SHARED_USING_2G
+	bool "Shared Wi-Fi 2.4G LED"
+
+config RTW_SW_LED_SHARED_USING_5G
+	bool "Shared Wi-Fi 5G LED"
+
+endchoice
+
+config RTW_FW_BUILTIN
+	bool "Embed FW into module or kernel"
+	default y
+	help
+	    Build FW binary into module or kernel.
+
+config SLOT_1_TX_BEAMFORMING
+	bool "mu-mimo switch"
+	default n
+	help
+	    enable mu-mimo.
+endif

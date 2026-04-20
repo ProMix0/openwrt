@@ -1,0 +1,6 @@
+//8832CR RFE51 version = 46
+//KTC8570N
+
+
+
+0xffff 0xffff

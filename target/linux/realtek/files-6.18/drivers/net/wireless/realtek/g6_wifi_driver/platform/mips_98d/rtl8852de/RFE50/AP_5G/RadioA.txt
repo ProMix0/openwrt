@@ -1,0 +1,6 @@
+//8832CR-VD RFE50 version = 02
+//AP_5G
+
+0xFD	0x05002
+
+0xffff 0xffff 			

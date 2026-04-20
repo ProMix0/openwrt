@@ -1,0 +1,716 @@
+// Format:					
+//					
+// 		Note: The order of the tables MUST match the definition in WLAN driver.			
+//					
+//		Power Limit Table Parameter Definition			
+//					
+//		@@Ver=3.0			
+//					
+//	(1)	Version 3.0 support to add regulations in the Power Limit Table from column 4.
+//		Customers can add new regulations by using DomainCode or CountryConde(ISO 3166-2).			
+//					
+//	(2)	Syntax:
+//			1. @@DomainCode=xx,  Regulation=xx
+//			2. @@CountryCode=xx,  Regulation=xx
+//					
+//		ex.			
+//			   @@DomainCode=0x2B, Regulation=IC	//RTK define domain code 0x2B for IC in colume 4
+//			   @@DomainCode=0x28, Regulation=KCC	//RTK define domain code 0x28 for KCC in colume 5
+//			   @@DomainCode=0x62, Regulation=C6	//Customer define domain code 0x62 for C6 in colume 6
+//			   @@CountryCode=US, Regulation=C6	//Customer define country code US for C6 in colume 6
+//			   @@CountryCode=GB, Regulation=C7	//Customer define country code GB for C7 in colume 7
+//					
+//		One DomainCode MUST has only one Regulation in Table.			
+//		One CountyCode MUST has only one Regulation in Table.			
+//					
+//	(3)	Error Syntax:
+//					
+//			   @@DomainCode=0x2D, Regulation=C6
+//			   @@DomainCode=0x2D, Regulation=C7
+//			   @@CountryCode=US, Regulation=C8
+//			   @@CountryCode=US, Regulation=C9
+//					
+//					
+//	(4)	If want to disable Tx power limit for one DomainCode or CountryConde, you can write "NONE" in Regulation.
+//					
+//		Syntax:			
+//			1. @@DomainCode=xx,  Regulation=NONE
+//			2. @@CountryCode=xx,  Regulation=NONE
+//					
+//		ex.			
+//			   @@DomainCode=0x2D, Regulation=NONE	//The domain code 0x2D will be disable in the Power Limit Table.
+//			   @@CountryCode=US, Regulation=NONE	//The country code US will be disable in the Power Limit Table.
+//					
+//					
+//					
+//					
+//		Band:			6G
+//		Bandwidth:		20/40/80/160 MHZ	
+//		RF Path:		1/2 Transmit RF	
+//		Rate Section:	OFDM/HE		
+//		Regulation: FCC/ETSI/MKK/IC/KCC/ACMA/CHILE/UKRAINE/MEXICO/CN/QATAR			
+//					
+//		Description:			
+//		1. IF in 1T test			
+//		2. power is real dBm.			
+//		3. // is for comment.			
+//					
+// 		NA is non-release channle.			
+//					
+//		Limit Table Version : V1			
+@@Ver=3.0					
+@@CountryCode=CL, Regulation=CHILE
+@@CountryCode=UA, Regulation=UKRAINE
+//					
+//Table 1: ===========================================					
+//					
+##	6G, 20M, 1T, OFDM, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH01	6.5	6			
+CH05	6.5	6			
+CH09	6.5	6			
+CH13	6.5	6			
+CH17	6.5	6			
+CH21	6.5	6			
+CH25	6.5	6			
+CH29	6.5	6			
+CH33	6.5	6			
+CH37	6.5	6			
+CH41	6.5	6			
+CH45	6.5	6			
+CH49	6.5	6.5			
+CH53	6.5	6.5			
+CH57	6.5	6.5			
+CH61	6.5	6.5			
+CH65	6.5	6.5			
+CH69	6.5	6.5			
+CH73	6.5	6.5			
+CH77	6.5	6.5			
+CH81	6.5	6.5			
+CH85	6.5	6.5			
+CH89	6.5	6.5			
+CH93	7	6.5			
+// 6G UNII-6					
+CH97	NA	NA			
+CH101	NA	NA			
+CH105	NA	NA			
+CH109	NA	NA			
+CH113	NA	NA			
+// 6G UNII-7 & 8					
+CH117	NA	NA			
+CH121	NA	NA			
+CH125	NA	NA			
+CH129	NA	NA			
+CH133	NA	NA			
+CH137	NA	NA			
+CH141	NA	NA			
+CH145	NA	NA			
+CH149	NA	NA			
+CH153	NA	NA			
+CH157	NA	NA			
+CH161	NA	NA			
+CH165	NA	NA			
+CH169	NA	NA			
+CH173	NA	NA			
+CH177	NA	NA			
+CH181	NA	NA			
+CH185	NA	NA			
+CH189	NA	NA			
+CH193	NA	NA			
+CH197	NA	NA			
+CH201	NA	NA			
+CH205	NA	NA			
+CH209	NA	NA			
+CH213	NA	NA			
+CH217	NA	NA			
+CH221	NA	NA			
+CH225	NA	NA			
+CH229	NA	NA			
+CH233	NA	NA			
+CH237	NA	NA			
+CH241	NA	NA			
+CH245	NA	NA			
+CH249	NA	NA			
+CH253	NA	NA			
+##	END				
+//					
+//Table 2: ===========================================					
+//					
+##	6G, 20M, 2T, OFDM, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH01	4	2.5			
+CH05	4	3			
+CH09	4	3			
+CH13	4	3			
+CH17	4	3			
+CH21	4	3			
+CH25	4	3			
+CH29	4	3			
+CH33	4	3			
+CH37	4	3			
+CH41	4	3			
+CH45	4	3			
+CH49	4	2.5			
+CH53	4	3.5			
+CH57	4	3.5			
+CH61	4	3.5			
+CH65	4	3.5			
+CH69	4	3.5			
+CH73	4	3.5			
+CH77	4	3.5			
+CH81	4	3.5			
+CH85	4	3.5			
+CH89	4	3.5			
+CH93	4	3			
+// 6G UNII-6					
+CH97	NA	NA			
+CH101	NA	NA			
+CH105	NA	NA			
+CH109	NA	NA			
+CH113	NA	NA			
+// 6G UNII-7 & 8					
+CH117	NA	NA			
+CH121	NA	NA			
+CH125	NA	NA			
+CH129	NA	NA			
+CH133	NA	NA			
+CH137	NA	NA			
+CH141	NA	NA			
+CH145	NA	NA			
+CH149	NA	NA			
+CH153	NA	NA			
+CH157	NA	NA			
+CH161	NA	NA			
+CH165	NA	NA			
+CH169	NA	NA			
+CH173	NA	NA			
+CH177	NA	NA			
+CH181	NA	NA			
+CH185	NA	NA			
+CH189	NA	NA			
+CH193	NA	NA			
+CH197	NA	NA			
+CH201	NA	NA			
+CH205	NA	NA			
+CH209	NA	NA			
+CH213	NA	NA			
+CH217	NA	NA			
+CH221	NA	NA			
+CH225	NA	NA			
+CH229	NA	NA			
+CH233	NA	NA			
+CH237	NA	NA			
+CH241	NA	NA			
+CH245	NA	NA			
+CH249	NA	NA			
+CH253	NA	NA			
+##	END				
+//					
+//Table 3: ===========================================					
+//					
+##	6G, 20M, 1T, HE, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH01	6.5	6			
+CH05	6.5	6			
+CH09	6.5	6			
+CH13	6.5	6			
+CH17	6.5	6			
+CH21	6.5	6			
+CH25	6.5	6			
+CH29	6.5	6			
+CH33	6.5	6			
+CH37	6.5	6			
+CH41	6.5	6			
+CH45	6.5	6			
+CH49	6.5	6.5			
+CH53	6.5	6.5			
+CH57	6.5	6.5			
+CH61	6.5	6.5			
+CH65	6.5	6.5			
+CH69	6.5	6.5			
+CH73	6.5	6.5			
+CH77	6.5	6.5			
+CH81	6.5	6.5			
+CH85	6.5	6.5			
+CH89	6.5	6.5			
+CH93	7	6.5			
+// 6G UNII-6					
+CH97	NA	NA			
+CH101	NA	NA			
+CH105	NA	NA			
+CH109	NA	NA			
+CH113	NA	NA			
+// 6G UNII-7 & 8					
+CH117	NA	NA			
+CH121	NA	NA			
+CH125	NA	NA			
+CH129	NA	NA			
+CH133	NA	NA			
+CH137	NA	NA			
+CH141	NA	NA			
+CH145	NA	NA			
+CH149	NA	NA			
+CH153	NA	NA			
+CH157	NA	NA			
+CH161	NA	NA			
+CH165	NA	NA			
+CH169	NA	NA			
+CH173	NA	NA			
+CH177	NA	NA			
+CH181	NA	NA			
+CH185	NA	NA			
+CH189	NA	NA			
+CH193	NA	NA			
+CH197	NA	NA			
+CH201	NA	NA			
+CH205	NA	NA			
+CH209	NA	NA			
+CH213	NA	NA			
+CH217	NA	NA			
+CH221	NA	NA			
+CH225	NA	NA			
+CH229	NA	NA			
+CH233	NA	NA			
+CH237	NA	NA			
+CH241	NA	NA			
+CH245	NA	NA			
+CH249	NA	NA			
+CH253	NA	NA			
+##	END				
+//					
+//Table 4: ===========================================					
+//					
+##	6G, 20M, 2T, HE, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH01	4	2.5			
+CH05	4	3			
+CH09	4	3			
+CH13	4	3			
+CH17	4	3			
+CH21	4	3			
+CH25	4	3			
+CH29	4	3			
+CH33	4	3			
+CH37	4	3			
+CH41	4	3			
+CH45	4	3			
+CH49	4	2.5			
+CH53	4	3.5			
+CH57	4	3.5			
+CH61	4	3.5			
+CH65	4	3.5			
+CH69	4	3.5			
+CH73	4	3.5			
+CH77	4	3.5			
+CH81	4	3.5			
+CH85	4	3.5			
+CH89	4	3.5			
+CH93	4	3			
+// 6G UNII-6					
+CH97	NA	NA			
+CH101	NA	NA			
+CH105	NA	NA			
+CH109	NA	NA			
+CH113	NA	NA			
+// 6G UNII-7 & 8					
+CH117	NA	NA			
+CH121	NA	NA			
+CH125	NA	NA			
+CH129	NA	NA			
+CH133	NA	NA			
+CH137	NA	NA			
+CH141	NA	NA			
+CH145	NA	NA			
+CH149	NA	NA			
+CH153	NA	NA			
+CH157	NA	NA			
+CH161	NA	NA			
+CH165	NA	NA			
+CH169	NA	NA			
+CH173	NA	NA			
+CH177	NA	NA			
+CH181	NA	NA			
+CH185	NA	NA			
+CH189	NA	NA			
+CH193	NA	NA			
+CH197	NA	NA			
+CH201	NA	NA			
+CH205	NA	NA			
+CH209	NA	NA			
+CH213	NA	NA			
+CH217	NA	NA			
+CH221	NA	NA			
+CH225	NA	NA			
+CH229	NA	NA			
+CH233	NA	NA			
+CH237	NA	NA			
+CH241	NA	NA			
+CH245	NA	NA			
+CH249	NA	NA			
+CH253	NA	NA			
+##	END				
+//					
+//Table 5: ===========================================					
+//					
+##	6G, 20M, 2T, HE, BF//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH01	4	2.5			
+CH05	4	3			
+CH09	4	3			
+CH13	4	3			
+CH17	4	3			
+CH21	4	3			
+CH25	4	3			
+CH29	4	3			
+CH33	4	3			
+CH37	4	3			
+CH41	4	3			
+CH45	4	3			
+CH49	4	2.5			
+CH53	4	3.5			
+CH57	4	3.5			
+CH61	4	3.5			
+CH65	4	3.5			
+CH69	4	3.5			
+CH73	4	3.5			
+CH77	4	3.5			
+CH81	4	3.5			
+CH85	4	3.5			
+CH89	4	3.5			
+CH93	4	3			
+// 6G UNII-6					
+CH97	NA	NA			
+CH101	NA	NA			
+CH105	NA	NA			
+CH109	NA	NA			
+CH113	NA	NA			
+// 6G UNII-7 & 8					
+CH117	NA	NA			
+CH121	NA	NA			
+CH125	NA	NA			
+CH129	NA	NA			
+CH133	NA	NA			
+CH137	NA	NA			
+CH141	NA	NA			
+CH145	NA	NA			
+CH149	NA	NA			
+CH153	NA	NA			
+CH157	NA	NA			
+CH161	NA	NA			
+CH165	NA	NA			
+CH169	NA	NA			
+CH173	NA	NA			
+CH177	NA	NA			
+CH181	NA	NA			
+CH185	NA	NA			
+CH189	NA	NA			
+CH193	NA	NA			
+CH197	NA	NA			
+CH201	NA	NA			
+CH205	NA	NA			
+CH209	NA	NA			
+CH213	NA	NA			
+CH217	NA	NA			
+CH221	NA	NA			
+CH225	NA	NA			
+CH229	NA	NA			
+CH233	NA	NA			
+CH237	NA	NA			
+CH241	NA	NA			
+CH245	NA	NA			
+CH249	NA	NA			
+CH253	NA	NA			
+##	END				
+//					
+//Table 6: ===========================================					
+//					
+##	6G, 40M, 1T, HE, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH03	6.5	6			
+CH11	6.5	6			
+CH19	6.5	6			
+CH27	6.5	6			
+CH35	6.5	6			
+CH43	6.5	6			
+CH51	7	6.5			
+CH59	6.5	6.5			
+CH67	6.5	6.5			
+CH75	6.5	6.5			
+CH83	6.5	6.5			
+CH91	6.5	6.5			
+// 6G UNII-6					
+CH99	NA	NA			
+CH107	NA	NA			
+// 6G UNII-7 & 8					
+CH115	NA	NA			
+CH123	NA	NA			
+CH131	NA	NA			
+CH139	NA	NA			
+CH147	NA	NA			
+CH155	NA	NA			
+CH163	NA	NA			
+CH171	NA	NA			
+CH179	NA	NA			
+CH187	NA	NA			
+CH195	NA	NA			
+CH203	NA	NA			
+CH211	NA	NA			
+CH219	NA	NA			
+CH227	NA	NA			
+CH235	NA	NA			
+CH243	NA	NA			
+CH251	NA	NA			
+##	END				
+//					
+//Table 7: ===========================================					
+//					
+##	6G, 40M, 2T, HE, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH03	3	3			
+CH11	3	3			
+CH19	3	3			
+CH27	3	3			
+CH35	3	3			
+CH43	3	3			
+CH51	3.5	3			
+CH59	3.5	3.5			
+CH67	3.5	3.5			
+CH75	3.5	3.5			
+CH83	3.5	3.5			
+CH91	3.5	3.5			
+// 6G UNII-6					
+CH99	NA	NA			
+CH107	NA	NA			
+// 6G UNII-7 & 8					
+CH115	NA	NA			
+CH123	NA	NA			
+CH131	NA	NA			
+CH139	NA	NA			
+CH147	NA	NA			
+CH155	NA	NA			
+CH163	NA	NA			
+CH171	NA	NA			
+CH179	NA	NA			
+CH187	NA	NA			
+CH195	NA	NA			
+CH203	NA	NA			
+CH211	NA	NA			
+CH219	NA	NA			
+CH227	NA	NA			
+CH235	NA	NA			
+CH243	NA	NA			
+CH251	NA	NA			
+##	END				
+//					
+//Table 8: ===========================================					
+//					
+##	6G, 40M, 2T, HE, BF//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH03	3	3			
+CH11	3	3			
+CH19	3	3			
+CH27	3	3			
+CH35	3	3			
+CH43	3	3			
+CH51	3.5	3			
+CH59	3.5	3.5			
+CH67	3.5	3.5			
+CH75	3.5	3.5			
+CH83	3.5	3.5			
+CH91	3.5	3.5			
+// 6G UNII-6					
+CH99	NA	NA			
+CH107	NA	NA			
+// 6G UNII-7 & 8					
+CH115	NA	NA			
+CH123	NA	NA			
+CH131	NA	NA			
+CH139	NA	NA			
+CH147	NA	NA			
+CH155	NA	NA			
+CH163	NA	NA			
+CH171	NA	NA			
+CH179	NA	NA			
+CH187	NA	NA			
+CH195	NA	NA			
+CH203	NA	NA			
+CH211	NA	NA			
+CH219	NA	NA			
+CH227	NA	NA			
+CH235	NA	NA			
+CH243	NA	NA			
+CH251	NA	NA			
+##	END				
+//					
+//Table 9: ===========================================					
+//					
+##	6G, 80M, 1T, HE, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH07	6.5	6			
+CH23	6	6			
+CH39	6	6			
+CH55	6	6.5			
+CH71	6	6			
+CH87	6	6			
+// 6G UNII-6					
+CH103	NA	NA			
+// 6G UNII-7 & 8					
+CH119	NA	NA			
+CH135	NA	NA			
+CH151	NA	NA			
+CH167	NA	NA			
+CH183	NA	NA			
+CH199	NA	NA			
+CH215	NA	NA			
+CH231	NA	NA			
+CH247	NA	NA			
+##	END				
+//					
+//Table 10: ===========================================					
+//					
+##	6G, 80M, 2T, HE, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH07	3.5	3			
+CH23	3	3			
+CH39	3	3			
+CH55	3	3			
+CH71	3	3			
+CH87	3	3			
+// 6G UNII-6					
+CH103	NA	NA			
+// 6G UNII-7 & 8					
+CH119	NA	NA			
+CH135	NA	NA			
+CH151	NA	NA			
+CH167	NA	NA			
+CH183	NA	NA			
+CH199	NA	NA			
+CH215	NA	NA			
+CH231	NA	NA			
+CH247	NA	NA			
+##	END				
+//					
+//Table 11: ===========================================					
+//					
+##	6G, 80M, 2T, HE, BF//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH07	3.5	3			
+CH23	3	3			
+CH39	3	3			
+CH55	3	3			
+CH71	3	3			
+CH87	3	3			
+// 6G UNII-6					
+CH103	NA	NA			
+// 6G UNII-7 & 8					
+CH119	NA	NA			
+CH135	NA	NA			
+CH151	NA	NA			
+CH167	NA	NA			
+CH183	NA	NA			
+CH199	NA	NA			
+CH215	NA	NA			
+CH231	NA	NA			
+CH247	NA	NA			
+##	END				
+//					
+//Table 12: ===========================================					
+//					
+##	6G, 160M, 1T, HE, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH15	5.5	6			
+CH47	5	6			
+CH79	5	6			
+// 6G UNII-6 & 7 & 8					
+CH111	NA	NA			
+CH143	NA	NA			
+CH175	NA	NA			
+CH207	NA	NA			
+CH239	NA	NA			
+##	END				
+//					
+//Table 13: ===========================================					
+//					
+##	6G, 160M, 2T, HE, NA//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH15	2.5	3			
+CH47	2	3			
+CH79	2	3			
+// 6G UNII-6 & 7 & 8					
+CH111	NA	NA			
+CH143	NA	NA			
+CH175	NA	NA			
+CH207	NA	NA			
+CH239	NA	NA			
+##	END				
+//					
+//Table 14: ===========================================					
+//					
+##	6G, 160M, 2T, HE, BF//
+##	START				
+##	#2#				
+##	MKK	KCC			
+PShape	0	0			
+// 6G UNII-5					
+CH15	2.5	3			
+CH47	2	3			
+CH79	2	3			
+// 6G UNII-6 & 7 & 8					
+CH111	NA	NA			
+CH143	NA	NA			
+CH175	NA	NA			
+CH207	NA	NA			
+CH239	NA	NA			
+##	END				

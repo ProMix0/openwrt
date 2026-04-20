@@ -1,0 +1,40 @@
+***rtl8192xbe***
+Type	BB_para(PHY_REG)	RF_para		Fem				Supplementary_para		Note
+[RFE50]	38(230308)		25(220830)	NA(PON_2G)			27(230201)
+[RFE51]	36(221220)		25(220830)	SKY85340			27(230201)
+						KCT8248HE1(*1)			27(230201)
+[RFE53]	36(221220)		25(220830)	KCT8239SD			27(230201)
+						KCT8239SD_2L(*1)		27(230201)
+						VC5337				27(230201)
+[RFE54]	38(230308)		25(220830)	RTC7646				27(230201)
+						RTK66287(RTK66287_PON)		31(230316)
+
+***rtl8832bre***
+Type	BB_para(PHY_REG)	RF_para		Fem				Supplementary_para		Note
+[RFE50]	36(221220)		11(220830)	NA(PON_5G)			7(221201)
+
+***rtl8852ae***
+Type	BB_para(PHY_REG)	RF_para		Fem				Supplementary_para		Note
+=== NOT Supported ===
+
+***rtl8852ce***
+Type	BB_para(PHY_REG)	RF_para		Fem					Supplementary_para	Note
+[RFE50]	44(230130)		58(221229)	NA(PON_5G)				46(230201)
+[RFE51]	44(230130)		58(221229)	KTC8570N				46(230201)
+						SKY85791(SKY85791_PON)			51(230316)
+						SKY85791_AIS(SKY85791_PON_AIS)(*1)	51(230316)		4 ant ver(DPX)
+[RFE52]	44(230130)		58(221229)	RTC66506				*old*
+						RTC66504HT(*1)				46(230201)
+						RTC66506K(*1)				46(230201)
+[RFE53]	44(230130)		58(221229)	KCT8539HE				46(230201)
+						KCT8575HP				46(230201)
+						VC5755(*1)				46(230201)
+[RFE54]	44(230130)		58(221229)	RTC7676D				46(230201)
+						RTC7676D_08U				46(230201)
+						RTC7676D1				46(230201)
+						RTC7676D1_2L(*1)			46(230201)
+						RTK66587_DPX(RTK66587_PON_DPX)		51(230316)
+						RTK66587_BPF(RTK66587_PON_BPF)		51(230316)
+
+
+*1 : fem could not be set in menuconfig yet

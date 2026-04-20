@@ -1,0 +1,24 @@
+[halbtc]
+refs/tags/HALBTC_026_001
+
+[halrf]
+refs/tags/HALRF_027_00_142_AP_HOTFIX
+SHA-1: e108a22e36776b687d17f5f8b4b31dae8f949752
+2024.9.20
+
+[halbb]
+refs/tags/HALBB_027_157_10
+SHA-1: ad91565f87a2b87dc0ea9ad6c6a77409291bcaea
+2024.10.11
+
+[halmac]
+refs/tags/HALMAC_0_27_110_0_FIX
+SHA-1: 7beb771cd91e95374f812936b8363940e92ade73
+2024.3.5
+
+[FW]
+refs/tags/WLANFW_V0.27.112.0
+0.27.112.0
+SHA-1: 8d3bd17bab800f51a612ad282c934125ee78b3da
+2024.2.20
+

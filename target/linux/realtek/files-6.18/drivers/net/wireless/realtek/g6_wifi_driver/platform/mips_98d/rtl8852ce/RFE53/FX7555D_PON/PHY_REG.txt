@@ -1,0 +1,127 @@
+//8832CR RFE53 version = 71
+//FX7555D_PON
+
+//TX TSSI
+
+//S0
+//wire r_tssi_dck_auto_en = r_page58_14[13];
+//wire [3:0] r_tssi_dck_auto_start_dly = r_page58_14[21:18];
+0x5814	0x2012F000
+//wire [3:0] r_tssi_adc_sampling_shift_ofdm = r_page58_1C[24:21];
+//wire [3:0] r_tssi_adc_sampling_shift_cck = r_page58_1C[28:25];
+0x581c	0x3DC80280
+//A
+0x5824	0x00000221
+0x582c	0x00000221
+0x5834	0x00000221
+0x583c	0x00000235
+0x5844	0x00000217
+0x584c	0x0000028A
+//K     
+0x5828	0x100000B9
+0x5830	0x100000B9
+0x5838	0x100000B9
+0x5840	0x100000C1
+0x5848	0x100000BD
+0x5850	0x100000B6
+//0x5854	0x000115F2
+//0x5858	0x10000121
+//0x585c	0x000115F2
+//0x5860	0x10000121
+
+
+//S1
+//wire r_tssi_dck_auto_en = r_page78_14[13];
+//wire [3:0] r_tssi_dck_auto_start_dly = r_page78_14[21:18];
+0x7814	0x2012F000
+//wire [3:0] r_tssi_adc_sampling_shift_ofdm = r_page78_1C[24:21];
+//wire [3:0] r_tssi_adc_sampling_shift_cck = r_page78_1C[28:25];
+0x781c	0x3DC80280
+//A
+0x7824	0x00000202
+0x782c	0x00000202
+0x7834	0x00000202
+0x783c	0x0000021E
+0x7844	0x0000020D
+0x784c	0x00000279
+//K     
+0x7828	0x100000B9
+0x7830	0x100000B9
+0x7838	0x100000B9
+0x7840	0x100000C1
+0x7848	0x100000BD
+0x7850	0x100000B5
+//0x7854	0x000115F2
+//0x7858	0x10000121
+//0x785c	0x000115F2
+//0x7860	0x10000121
+
+
+//tssi tssi_bypass_by_C_max[8:0] = 0x1ff (no limit) 
+0x58d8	0x800801ff
+0x78d8	0x800801ff
+
+
+//CBW160 TXSC DBW20/40/80 DE oft
+//CBW160 ADCWA for DBW20 0x1a8 [7:0]
+//CBW160 ADCWA for DBW40 0x1a8 [15:8]
+//CBW160 ADCWA for DBW80 0x1a8 [23:16]
+//reserved 0x1a8 [31:24]
+0x1A8	0x0004040A 
+
+
+//BW160 Tx POWER BY MACID
+0x190	0x28282828 //20,20,20,20 //MCS3, MCS2, MCS1, MCS0 1ss
+0x194	0x28282828 //20,20,20,20 //MCS7, MCS6, MCS5, MCS4 1ss   
+0x198	0x22224226 //17,17,18,19 //MCS11, MCS10, MCS9, MCS8 1ss
+0x19C	0x28282828 //20,20,20,20 //MCS3, MCS2, MCS1, MCS0 2ss
+0x1A0	0x28282828 //20,20,20,20 //MCS7, MCS6, MCS5, MCS4 2ss   
+0x1A4	0x22222426 //17,17,18,19 //MCS11, MCS10, MCS9, MCS8 2ss
+
+
+//Tx edpd
+//txagc_bnd settings 
+0x81ac	0x3FC60400
+0x81b0	0x3f914100
+0x82ac	0x3FC60400
+0x82b0	0x3f914100
+//pwsf
+0x81f0	0x0000f070
+0x82f0	0x0000f070
+
+
+
+// RX LNA gain/bypass mode:14dB/-6dB
+// Path A
+// 0x45DC[15:8]:gain mode
+// 0x45DC[7:0]:bypass mode
+0x45DC	0xE1CB38E8
+
+// Path B
+// 0x4740[15:8]:gain mode  
+// 0x4740[7:0]:bypass mode
+0x4740	0xE4CD38E8
+
+
+//rtl8852c version = 51
+// r_BW_start_half_sym_count = 6->5, 0x47AC[31:28]
+0x47ac	0x5248c631
+// r_wbadc_under_th = -18 -> -16, 0x4698[31:24]
+0x4698	0xf00f04d1
+// r_wbadc_under_th = -18 -> -16, 0x477C[31:24]
+0x477c	0xf00f04d1
+
+
+//linear twice setting
+0x4728	0x47FFFFFF    // 0x1 [31:30]	path0_agc	r_linear_step_lim	
+0x4A7C	0x47FFFFFF    // 0x1 [31:30]	path1_agc	r_linear_step_lim	
+0x46BC	0x400FC254    // 0x4 [3:0]	 path0_agc	r_lgc_freeze_th_h	
+0x4A70	0x400FC254    //  0x4 [3:0]   	path1_agc	r_lgc_freeze_th_h	
+0x472C	0x167893B6    //  0x2 [29:27]	path0_agc	r_lna_sel_margin_lgc
+0x4A80	0x167893B6    //  0x2 [29:27]	path1_agc	r_lna_sel_margin_lgc
+0x4730	0xE0399401  	 // 0x2 [11:9]    path0_agc	r_tia_sel_margin_lgc
+0x4A9C	0xE0399401    // 0x2 [11:9]	 path1_agc	r_tia_sel_margin_lgc
+
+
+
+0xffff	0xffff

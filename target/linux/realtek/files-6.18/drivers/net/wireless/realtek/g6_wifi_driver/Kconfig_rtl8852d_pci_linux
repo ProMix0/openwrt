@@ -1,0 +1,6 @@
+config RTL8852DE
+	tristate "Realtek 8852D PCIE WiFi"
+	depends on PCIE || PCI
+	---help---
+	  Help message of RTL8852DE
+
