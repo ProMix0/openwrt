@@ -636,7 +636,7 @@ _phl_alloc_wd_work_ring(struct phl_info_t *phl_info,
 					&wd_work[i].phy_addr_h,
 					buf_len,
 					wd_work[i].cache,
-					PCI_DMA_TODEVICE,
+					DMA_TO_DEVICE,
 					&wd_work[i].os_rsvd[0]);
  		if (NULL == wd_work[i].vir_addr) {
 			psts = RTW_PHL_STATUS_RESOURCE;
@@ -1346,12 +1346,12 @@ static enum rtw_phl_status enqueue_idle_rx_buf(
 	if (rx_buf->cache) {
 		#ifdef CONFIG_RTW_VM_CACHE_HANDLING
 		_os_vm_cache_wback(drvpriv, rx_buf->vir_addr, clr_len,
-		                   PCI_DMA_BIDIRECTIONAL);
+		                   DMA_BIDIRECTIONAL);
 		#else /* CONFIG_RTW_VM_CACHE_HANDLING */
 		_os_cache_wback(drvpriv,
 				&rx_buf->phy_addr_l,
 				&rx_buf->phy_addr_h,
-				clr_len, PCI_DMA_BIDIRECTIONAL);
+				clr_len, DMA_BIDIRECTIONAL);
 		#endif /* CONFIG_RTW_VM_CACHE_HANDLING */
 	}
 	#endif /* HAL_TO_NONCACHE_ADDR */
@@ -1958,7 +1958,7 @@ static struct rtw_wd_page *_phl_alloc_wd_page_pcie(
 							&wd_page[0].phy_addr_h,
 							(MAX_WD_PAGE_NUM * WD_PAGE_SIZE),
 							cache,
-							PCI_DMA_TODEVICE,
+							DMA_TO_DEVICE,
 							&wd_page[0].os_rsvd[0]);
 
 		if (NULL == wd_page[0].vir_addr) {
@@ -2098,7 +2098,7 @@ enum rtw_phl_status _phl_alloc_h2c_pkt_buf_pcie(struct phl_info_t *phl_info,
 				&h2c_pkt->phy_addr_h,
 				buf_len,
 				h2c_pkt->cache,
-				PCI_DMA_TODEVICE,
+				DMA_TO_DEVICE,
 				&h2c_pkt->os_rsvd[0]);
 
 	if (h2c_pkt->vir_head)
@@ -2169,7 +2169,7 @@ _phl_alloc_rxbd_pcie(struct phl_info_t *phl_info, u8 ch_num)
 						&rxbd[i].phy_addr_h,
 						buf_len,
 						rxbd[i].cache,
-						PCI_DMA_TODEVICE,
+						DMA_TO_DEVICE,
 						&rxbd[i].os_rsvd[0]);
 			if (NULL == rxbd[i].vir_addr) {
 				pstatus = RTW_PHL_STATUS_RESOURCE;
@@ -2257,7 +2257,7 @@ _phl_alloc_txbd_pcie(struct phl_info_t *phl_info, u8 ch_num)
 						&txbd[i].phy_addr_h,
 						buf_len,
 						txbd[i].cache,
-						PCI_DMA_TODEVICE,
+						DMA_TO_DEVICE,
 						&txbd[i].os_rsvd[0]);
 			if (NULL == txbd[i].vir_addr) {
 				pstatus = RTW_PHL_STATUS_RESOURCE;
@@ -3464,7 +3464,7 @@ phl_prepare_tx_pcie(struct phl_info_t *phl_info, struct rtw_xmit_req *tx_req)
 				_os_cache_wback(phl_to_drvpriv(phl_info),
 					&wd_page->phy_addr_l,
 					&wd_page->phy_addr_h,
-					wd_page->buf_len, PCI_DMA_TODEVICE);
+					wd_page->buf_len, DMA_TO_DEVICE);
 			}
 
 #ifdef CONFIG_PHL_TXSC

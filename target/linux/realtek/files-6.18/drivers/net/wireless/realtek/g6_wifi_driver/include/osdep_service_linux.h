@@ -499,7 +499,7 @@ static inline void rtw_thread_enter(char *name)
 
 static inline void rtw_thread_exit(_completion *comp)
 {
-	complete_and_exit(comp, 0);
+	kthread_complete_and_exit(comp, 0);
 }
 
 static inline _thread_hdl_ rtw_thread_start(int (*threadfn)(void *data),
@@ -914,7 +914,7 @@ struct rtw_timer_list {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0))
 static inline void timer_hdl(struct timer_list *in_timer)
 {
-	_timer *ptimer = from_timer(ptimer, in_timer, timer);
+	_timer *ptimer = (_timer *)in_timer;
 
 	ptimer->function(ptimer->arg);
 }
@@ -949,12 +949,12 @@ __inline static void _set_timer(_timer *ptimer, u32 delay_time)
 
 __inline static void _cancel_timer(_timer *ptimer, u8 *bcancelled)
 {
-	*bcancelled = del_timer_sync(&ptimer->timer) == 1 ? 1 : 0;
+	*bcancelled = timer_delete_sync(&ptimer->timer) == 1 ? 1 : 0;
 }
 
 __inline static void _cancel_timer_async(_timer *ptimer)
 {
-	del_timer(&ptimer->timer);
+	timer_delete(&ptimer->timer);
 }
 
 /*
@@ -1095,7 +1095,7 @@ enum {
 	return ret;
 #else
 	skb->dev = ndev;
-	skb->from_dev = ndev;
+//	skb->from_dev = ndev;
 	return netif_rx(skb);
 #endif
 }

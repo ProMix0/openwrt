@@ -14,6 +14,7 @@
  *****************************************************************************/
 #define _OSDEP_SERVICE_LINUX_C_
 #include <drv_types.h>
+#include <linux/random.h>
 
 #ifdef DBG_MEMORY_LEAK
 ATOMIC_T _malloc_cnt = ATOMIC_INIT(0);
@@ -711,6 +712,7 @@ RETURN:
 	return;
 }
 
+int rtw_change_ifname(_adapter *padapter, const char *ifname);
 int rtw_change_ifname(_adapter *padapter, const char *ifname)
 {
 	struct dvobj_priv *dvobj;
@@ -752,7 +754,7 @@ int rtw_change_ifname(_adapter *padapter, const char *ifname)
 
 	rtw_init_netdev_name(pnetdev, ifname);
 
-	_rtw_memcpy(pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
+//	_rtw_memcpy(pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
 
 	if (rtnl_lock_needed)
 		ret = register_netdev(pnetdev);
@@ -792,7 +794,7 @@ u64 rtw_division64(u64 x, u64 y)
 inline u32 rtw_random32(void)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
-	return prandom_u32();
+	return get_random_u32();
 #elif (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 18))
 	u32 random_int;
 	get_random_bytes(&random_int , 4);
@@ -850,9 +852,10 @@ void rtw_init_os_handler(struct dvobj_priv *dvobj, struct rtw_os_handler *handle
 	if (   (handler->type == RTW_OS_HANDLER_TASKLET)
 	    && (handler->cpu_id < WORK_CPU_UNBOUND)
 	    && (handler->task_data.csd.func == NULL)) {
-		handler->task_data.csd.func = _schedule_tasklet_handler;
-		handler->task_data.csd.info = &handler->task;
-		smp_store_release(&handler->task_data.csd.flags, 0);
+		INIT_CSD(&handler->task_data.csd, _schedule_tasklet_handler, &handler->task);
+//		handler->task_data.csd.func = _schedule_tasklet_handler;
+//		handler->task_data.csd.info = &handler->task;
+//		smp_store_release(&handler->task_data.csd.flags, 0);
 	}
 }
 

@@ -60,11 +60,11 @@ enum wlan_bw_2_web {
 #include <wifi_common.h>
 /* ***************************************************************** */
 
-#ifdef CONFIG_RTW_AP_EXT_SUPPORT
 typedef struct rtk_wlan_block_sta {
 	unsigned char mac[6];
 	unsigned int  block_time;
 } RTK_WLAN_BLOCK_STA;
+#ifdef CONFIG_RTW_AP_EXT_SUPPORT
 
 #ifdef AP_NEIGHBOR_INFO
 #define MAX_AP_NEIGHBOR_INFO_NUM 64

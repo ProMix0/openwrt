@@ -2114,7 +2114,7 @@ void txsc_recycle_txreq_phyaddr(_adapter *padapter, struct rtw_xmit_req *txreq)
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 			phy_addr |= ((u64)pkt_list->phy_addr_h << 32);
 #endif
-			pci_unmap_bus_addr(pdev, &phy_addr, pkt_list->length, PCI_DMA_TODEVICE);
+			pci_unmap_bus_addr(pdev, &phy_addr, pkt_list->length, DMA_TO_DEVICE);
 
 			rtw_mfree(pkt_list->vir_addr, pkt_list->length);
 		}
@@ -2128,7 +2128,7 @@ void txsc_recycle_txreq_phyaddr(_adapter *padapter, struct rtw_xmit_req *txreq)
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 			phy_addr |= ((u64)pkt_list->phy_addr_h << 32);
 #endif
-			pci_unmap_bus_addr(pdev, &phy_addr, pkt_list->length, PCI_DMA_TODEVICE);
+			pci_unmap_bus_addr(pdev, &phy_addr, pkt_list->length, DMA_TO_DEVICE);
 			pkt_list++;
 		}
 	}
@@ -2140,7 +2140,7 @@ void txsc_fill_txreq_phyaddr(_adapter *padapter, struct rtw_pkt_buf_list *pkt_li
 	struct pci_dev *pdev = pci_data->ppcidev;
 	dma_addr_t phy_addr = 0;
 
-	pci_get_bus_addr(pdev, pkt_list->vir_addr, &phy_addr, pkt_list->length, PCI_DMA_TODEVICE);
+	pci_get_bus_addr(pdev, pkt_list->vir_addr, &phy_addr, pkt_list->length, DMA_TO_DEVICE);
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 	pkt_list->phy_addr_h =  phy_addr >> 32;
 #else

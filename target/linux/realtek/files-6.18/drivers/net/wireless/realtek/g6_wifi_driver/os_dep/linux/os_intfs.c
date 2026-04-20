@@ -54,6 +54,7 @@ _adapter *tmp_crossband_vxd_sc = NULL;
  * Auther: Arvin Liu
  * Date: 2015/05/29
  */
+int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr);
 int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 {
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
@@ -88,7 +89,7 @@ int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 	}
 
 	_rtw_memcpy(adapter_mac_addr(padapter), sa->sa_data, ETH_ALEN); /* set mac addr to adapter */
-	_rtw_memcpy(pnetdev->dev_addr, sa->sa_data, ETH_ALEN); /* set mac addr to net_device */
+//	_rtw_memcpy(pnetdev->dev_addr, sa->sa_data, ETH_ALEN); /* set mac addr to net_device */
 
 	rtw_ps_deny(padapter, PS_DENY_IOCTL);
 	LeaveAllPowerSaveModeDirect(padapter); /* leave PS mode for guaranteeing to access hw register successfully */
@@ -134,6 +135,7 @@ static struct net_device_stats *rtw_net_get_stats(struct net_device *pnetdev)
 static const u16 rtw_1d_to_queue[8] = { 2, 3, 3, 2, 1, 1, 0, 0 };
 
 /* Given a data frame determine the 802.1p/1d tag to use. */
+unsigned int rtw_classify8021d(struct sk_buff *skb);
 unsigned int rtw_classify8021d(struct sk_buff *skb)
 {
 	unsigned int dscp;
@@ -522,13 +524,13 @@ static void rtw_ethtool_get_drvinfo(struct net_device *dev, struct ethtool_drvin
 
 	wdev = dev->ieee80211_ptr;
 	if (wdev) {
-		strlcpy(info->driver, wiphy_dev(wdev->wiphy)->driver->name,
+		strncpy(info->driver, wiphy_dev(wdev->wiphy)->driver->name,
 			sizeof(info->driver));
 	} else {
-		strlcpy(info->driver, "N/A", sizeof(info->driver));
+		strncpy(info->driver, "N/A", sizeof(info->driver));
 	}
 
-	strlcpy(info->version, DRIVERVERSION, sizeof(info->version));
+	strncpy(info->version, DRIVERVERSION, sizeof(info->version));
 
 	padapter = (_adapter *)rtw_netdev_priv(dev);
 
@@ -545,11 +547,11 @@ static void rtw_ethtool_get_drvinfo(struct net_device *dev, struct ethtool_drvin
 	} else
 	#endif
 	{
-		strlcpy(info->fw_version, "N/A", sizeof(info->fw_version));
+		strncpy(info->fw_version, "N/A", sizeof(info->fw_version));
 	}
 
 	if (wdev) {
-		strlcpy(info->bus_info, dev_name(wiphy_dev(wdev->wiphy)),
+		strncpy(info->bus_info, dev_name(wiphy_dev(wdev->wiphy)),
 			sizeof(info->bus_info));
 	}
 }
@@ -657,7 +659,7 @@ int rtw_os_ndev_register(_adapter *adapter, const char *name)
 	/* alloc netdev name */
 	rtw_init_netdev_name(ndev, name);
 
-	_rtw_memcpy(ndev->dev_addr, adapter_mac_addr(adapter), ETH_ALEN);
+//	_rtw_memcpy(ndev->dev_addr, adapter_mac_addr(adapter), ETH_ALEN);
 
 	/* Tell the network stack we exist */
 
@@ -1067,7 +1069,7 @@ u8 rtw_init_default_value(_adapter *padapter)
 #endif
 
 	/* default set duplicate rts on */
-	padapter->cca_rts_mode = 3;
+//	padapter->cca_rts_mode = 3;
 
 	return ret;
 }

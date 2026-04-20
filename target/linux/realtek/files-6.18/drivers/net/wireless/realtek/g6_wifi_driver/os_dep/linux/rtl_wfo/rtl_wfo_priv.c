@@ -416,10 +416,10 @@ int rtl_wfo_alloc_res(struct dvobj_priv *dvobj)
 		resource[i].res_size = (1 << (resource[i].res_order + PAGE_SHIFT));
 		// WB zero memory
 		pci_get_bus_addr(pdev, __va(resource[i].res_addr), &bus_addr,
-							resource[i].res_size, PCI_DMA_TODEVICE);
+							resource[i].res_size, DMA_TO_DEVICE);
 		if (!dma_mapping_error(&(pdev->dev), bus_addr)) {
 			_os_cache_wback(dvobj, &resource[i].res_addr, &phy_addr_h,
-							resource[i].res_size, PCI_DMA_TODEVICE);
+							resource[i].res_size, DMA_TO_DEVICE);
 		} else {
 			RTW_ERR("dma_mapping_error 0x%llx\n", bus_addr);
 			break;
@@ -539,7 +539,7 @@ inline void rtl_wfo_res_wback(struct dvobj_priv *dvobj,
 {
 	u32 phy_addr_h = 0;
 	_os_cache_wback(dvobj,
-		&phy_addr_l, &phy_addr_h, buf_size, PCI_DMA_TODEVICE);
+		&phy_addr_l, &phy_addr_h, buf_size, DMA_TO_DEVICE);
 }
 
 inline void rtl_wfo_res_inv(struct dvobj_priv *dvobj,
@@ -547,7 +547,7 @@ inline void rtl_wfo_res_inv(struct dvobj_priv *dvobj,
 {
 	u32 phy_addr_h = 0;
 	_os_cache_inv(dvobj,
-		&phy_addr_l, &phy_addr_h, buf_size, PCI_DMA_FROMDEVICE);
+		&phy_addr_l, &phy_addr_h, buf_size, DMA_FROMDEVICE);
 }
 
 
@@ -764,11 +764,11 @@ int rtl_wfo_add_res(struct dvobj_priv *dvobj, u16 res_type, int order)
 	resource.res_size = (1 << (order + PAGE_SHIFT));
 	// WB zero memory
 	pci_get_bus_addr(pdev, __va(resource.res_addr),
-		&bus_addr, resource.res_size, PCI_DMA_TODEVICE);
+		&bus_addr, resource.res_size, DMA_TO_DEVICE);
 	if (!dma_mapping_error(&(pdev->dev), bus_addr)) {
 		_os_cache_wback(dvobj,
 			&resource.res_addr, &phy_addr_h,
-			resource.res_size, PCI_DMA_TODEVICE);
+			resource.res_size, DMA_TO_DEVICE);
 	} else {
 		RTW_ERR("dma_mapping_error 0x%llx\n", bus_addr);
 		__free_pages(res_pages, order);

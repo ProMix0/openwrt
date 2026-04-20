@@ -19,7 +19,7 @@ void pci_cache_wback(struct pci_dev *hwdev,
 			dma_addr_t *bus_addr, size_t size, int direction)
 {
 	if (NULL != hwdev && NULL != bus_addr)
-	  	pci_dma_sync_single_for_device(hwdev, *bus_addr, size,
+	  	dma_sync_single_for_device(&hwdev->dev, *bus_addr, size,
 					direction);
 	else
 		RTW_ERR("pcie hwdev handle or bus addr is NULL!\n");
@@ -28,7 +28,7 @@ void pci_cache_inv(struct pci_dev *hwdev,
 			dma_addr_t *bus_addr, size_t size, int direction)
 {
 	if (NULL != hwdev && NULL != bus_addr)
-		pci_dma_sync_single_for_cpu(hwdev, *bus_addr, size, direction);
+		dma_sync_single_for_cpu(&hwdev->dev, *bus_addr, size, direction);
 	else
 		RTW_ERR("pcie hwdev handle or bus addr is NULL!\n");
 }
@@ -37,7 +37,7 @@ void pci_get_bus_addr(struct pci_dev *hwdev,
 			size_t size, int direction)
 {
 	if (NULL != hwdev) {
-		*bus_addr = pci_map_single(hwdev, vir_addr, size, direction);
+		*bus_addr = dma_map_single(&hwdev->dev, vir_addr, size, direction);
 	} else {
 		RTW_ERR("pcie hwdev handle is NULL!\n");
 	*bus_addr = (dma_addr_t)virt_to_phys(vir_addr);
@@ -48,7 +48,7 @@ void pci_unmap_bus_addr(struct pci_dev *hwdev,
 			dma_addr_t *bus_addr, size_t size, int direction)
 {
 	if (NULL != hwdev && NULL != bus_addr)
-		pci_unmap_single(hwdev, *bus_addr, size, direction);
+		dma_unmap_single(&hwdev->dev, *bus_addr, size, direction);
 	else
 		RTW_ERR("pcie hwdev handle or bus addr is NULL!\n");
 }
@@ -72,7 +72,7 @@ void *pci_alloc_noncache_mem(struct pci_dev *pdev,
 	void *vir_addr = NULL;
 
 	if (NULL != pdev)
-	vir_addr = pci_alloc_consistent(pdev, size, bus_addr);
+	vir_addr = dma_alloc_coherent(&pdev->dev, size, bus_addr, GFP_ATOMIC);
 
 	if (!vir_addr)
 		bus_addr = NULL;
@@ -94,7 +94,7 @@ void pci_free_noncache_mem(struct pci_dev *pdev,
 		void *vir_addr, dma_addr_t *bus_addr, size_t size)
 {
 	if (NULL != pdev)
-	pci_free_consistent(pdev, size, vir_addr, *bus_addr);
+	dma_free_coherent(&pdev->dev, size, vir_addr, *bus_addr);
 	vir_addr = NULL;
 }
 

@@ -7795,7 +7795,7 @@ void fill_txreq_phyaddr(_adapter *padapter, struct xmit_frame *pxframe)
 		struct rtw_pkt_buf_list *pkt_list =(struct rtw_pkt_buf_list *)txreq->pkt_list;
 		for(idx1=0; idx1<txreq->pkt_cnt; idx1++){
 			dma_addr_t phy_addr = 0;
-			pci_get_bus_addr(pdev, pkt_list->vir_addr, &phy_addr, pkt_list->length, PCI_DMA_TODEVICE);
+			pci_get_bus_addr(pdev, pkt_list->vir_addr, &phy_addr, pkt_list->length, DMA_TO_DEVICE);
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 			pkt_list->phy_addr_h =  phy_addr >> 32;
 #else

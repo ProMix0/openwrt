@@ -15,7 +15,8 @@
 #ifndef _PLTFM_OPS_LINUX_H_
 #define _PLTFM_OPS_LINUX_H_
 #include "drv_types.h"
-#include <stdarg.h>
+#include "phl_types.h"
+//#include <stdarg.h>
 
 #ifdef CONFIG_WNIC_RECYCLED_SKB
 #include "recycle_conf.h"
@@ -170,9 +171,9 @@ static inline void _os_vm_cache_inv(void *d, void *v, u32 buf_sz)
 
 static inline void _os_vm_cache_wback(void *d, void *v, u32 buf_sz, u8 direction)
 {
-	if (direction == PCI_DMA_BIDIRECTIONAL)
+	if (direction == DMA_BIDIRECTIONAL)
 		dma_cache_wback_inv((size_t)v, buf_sz);
-	else if (direction == PCI_DMA_TODEVICE)
+	else if (direction == DMA_TO_DEVICE)
 		dma_cache_wback((size_t)v, buf_sz);
 }
 #endif /* CONFIG_RTW_VM_CACHE_HANDLING */
@@ -304,7 +305,7 @@ static inline void *_os_pkt_buf_map_rx(void *d, u32 *bus_addr_l, u32 *bus_addr_h
 #endif
 	skb->len = 0;
 	skb_reset_tail_pointer(skb);
-	dma_addr = pci_map_single(pdev, skb->data,
+	dma_addr = dma_map_single(&pdev->dev, skb->data,
 	                             skb_buf_sz, //buf_sz,
 	                             PCI_DMA_FROMDEVICE);
 	*bus_addr_l = (u32)dma_addr;
@@ -340,7 +341,7 @@ _os_pkt_buf_unmap_rx_pci(struct dvobj_priv *pobj, u32 bus_addr_l,
 	dma_addr |= ((dma_addr_t)bus_addr_h) << 32;
 	#endif
 
-	pci_unmap_single(pdev, dma_addr, skb_buf_sz, PCI_DMA_FROMDEVICE);
+	dma_unmap_single(&pdev->dev, dma_addr, skb_buf_sz, PCI_DMA_FROMDEVICE);
 
 #ifdef RTW_CORE_RECORD
 	phl_add_record(d, REC_RX_UNMAP, bus_addr_l, buf_sz);
@@ -419,7 +420,7 @@ static inline void *_os_pkt_buf_alloc_rx(void *d, u32 *bus_addr_l,
 #endif /* CONFIG_RTW_RX_BUF_SHARING */
 
 #ifdef CONFIG_PCI_HCI
-	dma_addr = pci_map_single(pdev, skb->data, skb_buf_sz, PCI_DMA_FROMDEVICE);
+	dma_addr = dma_map_single(&pdev->dev, skb->data, skb_buf_sz, PCI_DMA_FROMDEVICE);
 	*bus_addr_l = (u32)dma_addr;
 	#ifdef PHL_DMA_ADDR_64
 	*bus_addr_h = (dma_addr >> 32);
@@ -499,7 +500,7 @@ static inline void *_os_pkt_buf_alloc_rx_2(void *d, u32 buf_sz,
 	rxb_info->rx_buf_sz = rxbuf_size - PHL_RX_HEADROOM;
 	rxb_info->type = 1;
 	#ifdef CONFIG_PCI_HCI
-	dma_addr = pci_map_single(pdev, skb_1->data, rxb_info->rx_buf_sz,
+	dma_addr = dma_map_single(&pdev->dev, skb_1->data, rxb_info->rx_buf_sz,
 	                               PCI_DMA_FROMDEVICE);
 	*bus_addr_l_1 = (u32)dma_addr;
 	#ifdef PHL_DMA_ADDR_64
@@ -516,7 +517,7 @@ static inline void *_os_pkt_buf_alloc_rx_2(void *d, u32 buf_sz,
 	rxb_info->rx_buf_sz = rxbuf_size - PHL_RX_HEADROOM;
 	rxb_info->type = 2;
 	#ifdef CONFIG_PCI_HCI
-	dma_addr = pci_map_single(pdev, skb_2->data, rxb_info->rx_buf_sz,
+	dma_addr = dma_map_single(&pdev->dev, skb_2->data, rxb_info->rx_buf_sz,
 	                          PCI_DMA_FROMDEVICE);
 	*bus_addr_l_2 = (u32)dma_addr;
 	#ifdef PHL_DMA_ADDR_64
@@ -553,7 +554,7 @@ static inline void _os_pkt_buf_free_rx(void *d, u8 *vir_addr, u32 bus_addr_l,
 	#ifdef PHL_DMA_ADDR_64
 	bus_addr |= ((dma_addr_t)bus_addr_h) << 32;
 	#endif
-	pci_unmap_single(pdev, bus_addr, skb_buf_sz, PCI_DMA_FROMDEVICE);
+	dma_unmap_single(&pdev->dev, bus_addr, skb_buf_sz, PCI_DMA_FROMDEVICE);
 #endif
 	rtw_skb_free(skb);
 }

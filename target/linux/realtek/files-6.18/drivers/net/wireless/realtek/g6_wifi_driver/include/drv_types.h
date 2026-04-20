@@ -247,7 +247,7 @@ typedef struct _ADAPTER _adapter;
 
 #define RTL_MS_TO_256US(x) (((x*1000)%256) ? (((x*1000)/256)+1) : ((x*1000)/256))
 
-#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+//#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
 #define SPEC_DEV_ID_NONE BIT(0)
 #define SPEC_DEV_ID_DISABLE_HT BIT(1)

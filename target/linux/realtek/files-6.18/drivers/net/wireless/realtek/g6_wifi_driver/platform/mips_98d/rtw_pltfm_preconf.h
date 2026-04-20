@@ -30,7 +30,7 @@
 #endif
 
 /* Enable FleetConntrack packet forwarding to speed up wlan to eth */
-#define CONFIG_RTW_FC_FASTFWD
+//#define CONFIG_RTW_FC_FASTFWD
 
 /* MBSSID/VAP support */
 #ifndef CONFIG_RTW_SUPPORT_MBSSID_VAP

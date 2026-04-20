@@ -872,11 +872,15 @@ endif
 ####################################################
 
 ifneq (,$(wildcard $(DRV_PATH)/phl/gen_git_info.sh))
-$(shell $(DRV_PATH)/phl/gen_git_info.sh $(DIR_LINUX)/$(subst $(DIR_LINUX),,$(DRV_PATH)))
+#$(shell $(DRV_PATH)/phl/gen_git_info.sh $(DIR_LINUX)/$(subst $(DIR_LINUX),,$(DRV_PATH)))
 endif
 include $(src)/phl/phl.mk
 
 
+EXTRA_CFLAGS += -Wno-missing-declarations
+EXTRA_CFLAGS += -Wno-error=missing-prototypes -Wno-missing-prototypes
+EXTRA_CFLAGS += -Wno-error=enum-conversion -Wno-enum-conversion
+ccflags-y	+= $(EXTRA_CFLAGS)
 obj-$(CONFIG_RTLWIFI6) := $(MODULE_NAME).o
 obj-$(CPTCFG_RTLWIFI6) := $(MODULE_NAME).o
 $(MODULE_NAME)-y = $(OBJS)

@@ -491,7 +491,7 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
 	if (started) {
-		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0);
+		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, 0);
 		goto exit;
 	}
 #endif
@@ -499,7 +499,7 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 	if (!rtw_cfg80211_allow_ch_switch_notify(adapter))
 		goto exit;
 
-	cfg80211_ch_switch_notify(adapter->pnetdev, &chdef);
+	cfg80211_ch_switch_notify(adapter->pnetdev, &chdef, 0);
 
 #else
 	int freq = rtw_ch2freq(ch);
@@ -2030,6 +2030,7 @@ exit:
 }
 
 static int cfg80211_rtw_add_key(struct wiphy *wiphy, struct net_device *ndev
+	, int link_id
 	, u8 key_index
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
 	, bool pairwise
@@ -2196,6 +2197,7 @@ addkey_end:
 }
 
 static int cfg80211_rtw_get_key(struct wiphy *wiphy, struct net_device *ndev
+	, int link_id
 	, u8 keyid
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
 	, bool pairwise
@@ -2397,6 +2399,7 @@ exit:
 }
 
 static int cfg80211_rtw_del_key(struct wiphy *wiphy, struct net_device *ndev,
+	, int link_id
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
 				u8 key_index, bool pairwise, const u8 *mac_addr)
 #else	/* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) */
@@ -2417,7 +2420,9 @@ static int cfg80211_rtw_del_key(struct wiphy *wiphy, struct net_device *ndev,
 }
 
 static int cfg80211_rtw_set_default_key(struct wiphy *wiphy,
-	struct net_device *ndev, u8 key_index
+	struct net_device *ndev
+	, int link_id
+	, u8 key_index
 	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 38)) || defined(COMPAT_KERNEL_RELEASE)
 	, bool unicast, bool multicast
 	#endif
@@ -2465,7 +2470,9 @@ static int cfg80211_rtw_set_default_key(struct wiphy *wiphy,
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30))
 int cfg80211_rtw_set_default_mgmt_key(struct wiphy *wiphy,
-	struct net_device *ndev, u8 key_index)
+	struct net_device *ndev
+	, int link_id
+	, u8 key_index)
 {
 #define SET_DEF_KEY_PARAM_FMT " key_index=%d"
 #define SET_DEF_KEY_PARAM_ARG , key_index
@@ -3847,7 +3854,9 @@ exit:
 	return ret;
 }
 
-static int cfg80211_rtw_set_wiphy_params(struct wiphy *wiphy, u32 changed)
+static int cfg80211_rtw_set_wiphy_params(struct wiphy *wiphy
+	, int radio_id
+, u32 changed)
 {
 #if 0
 	struct iwm_priv *iwm = wiphy_to_iwm(wiphy);
@@ -4866,6 +4875,7 @@ static int cfg80211_rtw_set_txpower(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	struct wireless_dev *wdev,
 #endif
+	, int radio_id
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)) || defined(COMPAT_KERNEL_RELEASE)
 	enum nl80211_tx_power_setting type, int mbm)
 #else
@@ -4915,6 +4925,7 @@ static int cfg80211_rtw_get_txpower(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	struct wireless_dev *wdev,
 #endif
+	, int radio_id
 	int *dbm)
 {
 #ifdef CONFIG_OPENSYNC
@@ -6214,7 +6225,9 @@ exit:
 	return ret;
 }
 
-static int cfg80211_rtw_stop_ap(struct wiphy *wiphy, struct net_device *ndev)
+static int cfg80211_rtw_stop_ap(struct wiphy *wiphy, struct net_device *ndev
+	, int link_id
+)
 {
 	_adapter *adapter = (_adapter *)rtw_netdev_priv(ndev);
 #ifdef CONFIG_OPENSYNC
@@ -11843,7 +11856,9 @@ u8 rtw_cfg80211_radar_detected_event(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 }
 #endif
 
-int cfg80211_rtw_set_antenna(struct wiphy *wiphy, u32 tx_ant, u32 rx_ant)
+int cfg80211_rtw_set_antenna(struct wiphy *wiphy
+	, int radio_id
+, u32 tx_ant, u32 rx_ant)
 {
 	struct rtw_wiphy_data *wiphy_data = rtw_wiphy_priv(wiphy);
 
@@ -11853,7 +11868,9 @@ int cfg80211_rtw_set_antenna(struct wiphy *wiphy, u32 tx_ant, u32 rx_ant)
 	return SUCCESS;
 }
 
-int	cfg80211_rtw_get_antenna(struct wiphy *wiphy, u32 *tx_ant, u32 *rx_ant)
+int	cfg80211_rtw_get_antenna(struct wiphy *wiphy
+	, int radio_id
+, u32 *tx_ant, u32 *rx_ant)
 {
 	struct rtw_wiphy_data *wiphy_data = rtw_wiphy_priv(wiphy);
 

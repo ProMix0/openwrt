@@ -15,6 +15,7 @@
 #define _XMIT_OSDEP_C_
 
 #include <drv_types.h>
+#include <net/ndisk.h>
 
 #ifdef CONFIG_RTL_VLAN_8021Q
 #include <linux/if_vlan.h>
