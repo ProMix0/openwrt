@@ -80,10 +80,10 @@
 #define RTMD_931X_NUM_PORTS			56
 #define RTMD_960X_NUM_INT_BUSES			1
 #define RTMD_960X_NUM_INT_PAGES			4096
-#define RTMD_960X_NUM_INT_PORTS			4
+#define RTMD_960X_NUM_INT_PORTS			32
 #define RTMD_960X_NUM_EXT_BUSES			2
 #define RTMD_960X_NUM_EXT_PAGES			8192
-#define RTMD_960X_NUM_EXT_PORTS			4
+#define RTMD_960X_NUM_EXT_PORTS			32
 
 #define RTMD_PAGE_SELECT			0x1f
 #define RTMD_RAW_PAGE(p)			((p) - 1)
@@ -229,6 +229,7 @@
 #define   RTMD_960X_SMI_PHY_ABLTY_MASK(pn)	(GENMASK(1, 0) << (((pn) % 16) * 2))
 #define RTMD_960X_CFG_POLL_MDX_PMSK		(0x23034)
 #define RTMD_960X_CFG_POLL_MDX_ADDR		(0x23038)
+#define   RTMDIO_960X_CFG_POLL_MDX_PORT_MASK    GENMASK(4, 0)
 #define RTMD_960X_CFG_10GPHY_POLLING_SEL4	(0x23050)
 #define RTMD_960X_CFG_10GPHY_POLLING_SEL3	(0x23054)
 #define RTMD_960X_CFG_10GPHY_POLLING_SEL2	(0x23058)
@@ -651,46 +652,54 @@ static int rtmd_960x_read_int_c22(struct mii_bus *bus, u32 pn, u32 page, u32 reg
 
 static int rtmd_960x_read_ext_c22(struct mii_bus *bus, u32 pn, u32 page, u32 reg, u32 *val)
 {
+	struct rtmd_ctrl *ctrl = rtmd_bus_to_ctrl(bus);
 	struct rtmd_command_data cmd_data = {
-		.brdcast = RTMD_960X_SMI_INDRT_PORT(pn),
 		.c22_adr = RTMD_960X_C22_DATA_EXT(page, reg),
-		.brdcast_override = true,
+		.mask_lo = pn & RTMDIO_960X_CFG_POLL_MDX_PORT_MASK,
 	};
+
+	regmap_clear_bits(ctrl->map, RTMD_960X_CFG_POLL_CTRL_0, RTMD_960X_CFG_POLL_FMT_SEL_C45(ctrl->port[pn].smi_bus));
 
 	return rtmd_run_cmd(bus, RTMD_960X_CMD_READ_EXT_C22, &cmd_data, val);
 }
 
 static int rtmd_960x_write_ext_c22(struct mii_bus *bus, u32 pn, u32 page, u32 reg, u32 val)
 {
+	struct rtmd_ctrl *ctrl = rtmd_bus_to_ctrl(bus);
 	struct rtmd_command_data cmd_data = {
 		.c22_adr = RTMD_960X_C22_DATA_EXT(page, reg),
-		.mask_lo = BIT(pn),
+		.mask_lo = pn & RTMDIO_960X_CFG_POLL_MDX_PORT_MASK,
 		.io_data = val,
-		.brdcast_override = true,
 	};
+
+	regmap_clear_bits(ctrl->map, RTMD_960X_CFG_POLL_CTRL_0, RTMD_960X_CFG_POLL_FMT_SEL_C45(ctrl->port[pn].smi_bus));
 
 	return rtmd_run_cmd(bus, RTMD_960X_CMD_WRITE_EXT_C22, &cmd_data, NULL);
 }
 
 static int rtmd_960x_read_c45(struct mii_bus *bus, u32 pn, u32 devnum, u32 regnum, u32 *val)
 {
+	struct rtmd_ctrl *ctrl = rtmd_bus_to_ctrl(bus);
 	struct rtmd_command_data cmd_data = {
-		.brdcast = RTMD_960X_SMI_INDRT_PORT(pn),
 		.c45_adr = RTMD_C45_DATA(devnum, regnum),
-		.brdcast_override = true,
+		.mask_lo = pn & RTMDIO_960X_CFG_POLL_MDX_PORT_MASK,
 	};
+
+	regmap_set_bits(ctrl->map, RTMD_960X_CFG_POLL_CTRL_0, RTMD_960X_CFG_POLL_FMT_SEL_C45(ctrl->port[pn].smi_bus));
 
 	return rtmd_run_cmd(bus, RTMD_960X_CMD_READ_C45, &cmd_data, val);
 }
 
 static int rtmd_960x_write_c45(struct mii_bus *bus, u32 pn, u32 devnum, u32 regnum, u32 val)
 {
+	struct rtmd_ctrl *ctrl = rtmd_bus_to_ctrl(bus);
 	struct rtmd_command_data cmd_data = {
 		.c45_adr = RTMD_C45_DATA(devnum, regnum),
-		.mask_lo = BIT(pn),
+		.mask_lo = pn & RTMDIO_960X_CFG_POLL_MDX_PORT_MASK,
 		.io_data = val,
-		.brdcast_override = true,
 	};
+
+	regmap_set_bits(ctrl->map, RTMD_960X_CFG_POLL_CTRL_0, RTMD_960X_CFG_POLL_FMT_SEL_C45(ctrl->port[pn].smi_bus));
 
 	return rtmd_run_cmd(bus, RTMD_960X_CMD_WRITE_C45, &cmd_data, NULL);
 }
@@ -1192,6 +1201,7 @@ static int rtmd_960x_setup_ext_ctrl(struct rtmd_ctrl *ctrl)
 	return 0;
 }
 
+#if 1
 static int rtmd_960x_set_port_ability(struct rtmd_ctrl *ctrl, u32 pn, u32 ability)
 {
 	u32 mask;
@@ -1271,6 +1281,7 @@ static int rtmd_960x_setup_polling(struct rtmd_ctrl *ctrl)
 
 	return 0;
 }
+#endif
 
 static int rtmd_map_ports(struct device *dev)
 {
@@ -1384,7 +1395,7 @@ static int rtmd_probe_one(struct device *dev, struct rtmd_ctrl *ctrl,
 
 	ret = devm_of_mdiobus_register(dev, bus, to_of_node(fw_bus));
 	if (ret)
-		return dev_err_probe(dev, ret, "cannot register MDIO %d bus\n", smi_bus);
+		return dev_err_probe(dev, ret, "cannot register MDIO %s%d bus\n", ctrl->cfg->bus_subid, smi_bus);
 
 	return 0;
 }
@@ -1561,10 +1572,10 @@ static const struct rtmd_config rtmd_960x_ext_cfg = {
 		.c22_adr = RTMD_960X_SMI_INDRT_ACCESS_CTRL_0,
 		.c45_adr = RTMD_960X_SMI_INDRT_ACCESS_MMD,
 		.ex_page = RTMD_960X_SMI_INDRT_ACCESS_CTRL_1,
-		.mask_lo = RTMD_960X_SMI_INDRT_ACCESS_CTRL_2,
+		.mask_lo = RTMD_960X_CFG_POLL_MDX_ADDR,
 		.io_data = RTMD_960X_SMI_INDRT_ACCESS_CTRL_3,
 	},
-	.bus_port_map_base	= RTMD_960X_CFG_POLL_MDX_ADDR,
+//	.bus_port_map_base	= RTMD_960X_CFG_POLL_MDX_ADDR,
 	.num_buses	= RTMD_960X_NUM_EXT_BUSES,
 	.num_pages	= RTMD_960X_NUM_EXT_PAGES,
 	.num_ports	= RTMD_960X_NUM_EXT_PORTS,

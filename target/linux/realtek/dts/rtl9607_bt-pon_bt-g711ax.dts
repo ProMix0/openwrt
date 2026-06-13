@@ -205,8 +205,9 @@
 };
 
 &mdio_bus1 {
-	phy0: ethernet-phy@6 {
+	phy6: ethernet-phy@6 {
 		reg = <6>;
+		// Needed to reset before access
 		compatible = "ethernet-phy-id001c.c849", "ethernet-phy-ieee802.3-c22";
 
 		reset-gpios = <&gpio1 28 GPIO_ACTIVE_LOW>;

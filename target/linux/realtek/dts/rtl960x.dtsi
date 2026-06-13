@@ -241,7 +241,7 @@
 		clock-frequency = <62500000>;
 	};
 
-	switchcore@1b000000 {
+	switch0: ethernet-switch@1b000000 {
 		compatible = "syscon", "simple-mfd";
 		reg = <0x1b000000 0x1000000>;
 		#address-cells = <1>;
@@ -300,9 +300,6 @@
 		soc_thermal: thermal {
 			compatible = "realtek,rtl9607-thermal";
 			#thermal-sensor-cells = <0>;
-		};
-
-		switch0: ethernet-switch {
 		};
 	};
 
