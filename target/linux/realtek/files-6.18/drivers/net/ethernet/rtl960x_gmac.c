@@ -176,6 +176,11 @@ static inline void gmac_w8(struct rtl960x_gmac *g, u32 reg, u8 val)
 	__raw_writeb(val, g->base + reg);
 }
 
+static inline u8 gmac_r8(struct rtl960x_gmac *g, u32 reg)
+{
+	return __raw_readb(g->base + reg);
+}
+
 static void rtl960x_gmac_stop_hw(struct rtl960x_gmac *g)
 {
 	gmac_w32(g, GMAC_IO_CMD, 0);
@@ -689,17 +694,23 @@ static int rtl960x_gmac_stop(struct net_device *ndev)
 {
 	struct rtl960x_gmac *g = netdev_priv(ndev);
 
+	printk("stop gmac\n");
+
 	netif_stop_queue(ndev);
 	netif_carrier_off(ndev);
 
+	printk("after stop queue\n");
 	rtl960x_gmac_stop_hw(g);
+	printk("after stop HW\n");
 
 	napi_disable(&g->napi);
 	timer_delete_sync(&g->tx_timer);
 	free_irq(g->irq, g);
 
+	printk("gmac free\n");
 	rtl960x_gmac_free_tx(g);
 	rtl960x_gmac_free_rings(g);
+	printk("stop gmac done\n");
 
 	return 0;
 }
@@ -746,9 +757,34 @@ static void rtl960x_gmac_get_regs(struct net_device *ndev,
 		buf[i] = gmac_r32(g, i * sizeof(u32));
 }
 
+static int rtl960x_gmac_get_4(struct net_device *ndev) {
+	return 4;
+}
+
+static int rtl960x_gmac_get_cmd(struct net_device *ndev, struct ethtool_eeprom *eee, u8 *buf) {
+	struct rtl960x_gmac *g = netdev_priv(ndev);
+	int i;
+	for (i = 0; i < eee->len; i++){
+		buf[i] = gmac_r8(g, GMAC_IO_CMD + eee->offset + i);
+	}
+	return 0;
+}
+
+static int rtl960x_gmac_set_cmd(struct net_device *ndev, struct ethtool_eeprom *eee, u8 *buf) {
+	struct rtl960x_gmac *g = netdev_priv(ndev);
+	int i;
+	for (i = 0; i < eee->len; i++){
+		gmac_w8(g, GMAC_IO_CMD + eee->offset + i, buf[i]);
+	}
+	return 0;
+}
+
 static const struct ethtool_ops rtl960x_gmac_ethtool_ops = {
 	.get_regs_len	= rtl960x_gmac_get_regs_len,
 	.get_regs	= rtl960x_gmac_get_regs,
+	.get_eeprom_len	= rtl960x_gmac_get_4,
+	.get_eeprom	= rtl960x_gmac_get_cmd,
+	.set_eeprom	= rtl960x_gmac_set_cmd,
 };
 
 static void rtl960x_gmac_assert_reset(void *rst)
@@ -827,7 +863,7 @@ static int rtl960x_gmac_probe(struct platform_device *pdev)
 
 static const struct of_device_id rtl960x_gmac_of_match[] = {
 	{ .compatible = "realtek,rtl8198d-gmac" },
-	{ .compatible = "realtek,rtl9607-gmac" },
+	{ .compatible = "realtek,rtl9607c-gmac" },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, rtl960x_gmac_of_match);

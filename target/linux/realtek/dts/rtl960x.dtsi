@@ -111,7 +111,7 @@
 
 		/* CPU-port conduit of the always-on switch: enabled by default */
 		gmac0: ethernet@12000 {
-			compatible = "realtek,rtl8198d-gmac", "realtek,rtl9607-gmac";
+			compatible = "realtek,rtl8198d-gmac", "realtek,rtl9607c-gmac";
 			reg = <0x12000 0x2000>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SHARED 36 IRQ_TYPE_LEVEL_HIGH>;
@@ -120,7 +120,7 @@
 		};
 
 		gmac1: ethernet@14000 {
-			compatible = "realtek,rtl8198d-gmac", "realtek,rtl9607-gmac";
+			compatible = "realtek,rtl8198d-gmac", "realtek,rtl9607c-gmac";
 			reg = <0x14000 0x2000>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SHARED 38 IRQ_TYPE_LEVEL_HIGH>;
@@ -130,7 +130,7 @@
 		};
 
 		gmac2: ethernet@16000 {
-			compatible = "realtek,rtl8198d-gmac", "realtek,rtl9607-gmac";
+			compatible = "realtek,rtl8198d-gmac", "realtek,rtl9607c-gmac";
 			reg = <0x16000 0x2000>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SHARED 40 IRQ_TYPE_LEVEL_HIGH>;
