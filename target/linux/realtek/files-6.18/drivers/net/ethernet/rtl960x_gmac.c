@@ -79,12 +79,14 @@
 #define IO_CMD_RX_FIFO_64B	2
 #define IO_CMD_RX_PKT_TMR_APRO	1
 #define IO_CMD_TX_INT_28PKTS	7
+#define IO_CMD_TX_PKT_TMR_MAX	0xf	/* The more - the biggest timeout */
 #define IO_CMD_TX_FIFO_THRESH_APRO	1
 #define IO_CMD_CONFIG		(IO_CMD_RX_ENABLE | IO_CMD_TX_ENABLE |			\
 				 FIELD_PREP(IO_CMD_RX_INT_TRIG_L, IO_CMD_RX_INT_12PKTS) |	\
 				 FIELD_PREP(IO_CMD_RX_FIFO_THRESH, IO_CMD_RX_FIFO_64B) |	\
 				 FIELD_PREP(IO_CMD_RX_PKT_TMR_L, IO_CMD_RX_PKT_TMR_APRO) |	\
 				 FIELD_PREP(IO_CMD_TX_INT_TRIG_L, IO_CMD_TX_INT_28PKTS) |	\
+				 FIELD_PREP(IO_CMD_TX_PKT_TMR, IO_CMD_TX_PKT_TMR_MAX) |	\
 				 FIELD_PREP(IO_CMD_TX_FIFO_THRESH, IO_CMD_TX_FIFO_THRESH_APRO) | \
 				 IO_CMD_SHORT_DES_FMT)
 
@@ -126,7 +128,8 @@ struct rtl960x_gmac {
 	struct device *dev;
 	void __iomem *base;
 	int irq;
-	struct napi_struct napi;
+	struct napi_struct rx_napi;
+	struct napi_struct tx_napi;
 	struct reset_control *rst;
 
 	/* RX ring */
@@ -143,7 +146,6 @@ struct rtl960x_gmac {
 	u32 tx_head;			/* next slot to fill */
 	u32 tx_tail;			/* next slot to reclaim */
 	spinlock_t tx_lock;		/* protects tx_head/tx_tail and the ring */
-	struct timer_list tx_timer;	/* backstop for uncoalesced TX tails */
 };
 
 /*
@@ -343,14 +345,14 @@ static void rtl960x_gmac_init_hw(struct rtl960x_gmac *g)
 	gmac_w16(g, GMAC_IMR, ISR_NAPI);
 }
 
-static void rtl960x_gmac_mask_irqs(struct rtl960x_gmac *g)
+static void rtl960x_gmac_mask_irqs(struct rtl960x_gmac *g, u16 irq)
 {
-	gmac_w16(g, GMAC_IMR, gmac_r16(g, GMAC_IMR) & ~ISR_NAPI);
+	gmac_w16(g, GMAC_IMR, gmac_r16(g, GMAC_IMR) & ~irq);
 }
 
-static void rtl960x_gmac_unmask_irqs(struct rtl960x_gmac *g)
+static void rtl960x_gmac_unmask_irqs(struct rtl960x_gmac *g, u16 irq)
 {
-	gmac_w16(g, GMAC_IMR, gmac_r16(g, GMAC_IMR) | ISR_NAPI);
+	gmac_w16(g, GMAC_IMR, gmac_r16(g, GMAC_IMR) | irq);
 }
 
 static int rtl960x_gmac_rx(struct rtl960x_gmac *g, int budget)
@@ -447,7 +449,7 @@ static int rtl960x_gmac_rx(struct rtl960x_gmac *g, int budget)
 		skb->protocol = eth_type_trans(skb, ndev);
 		ndev->stats.rx_packets++;
 		ndev->stats.rx_bytes += len;
-		napi_gro_receive(&g->napi, skb);
+		napi_gro_receive(&g->rx_napi, skb);
 
 		g->rx_skb[g->rx_head] = new_skb;
 		g->rx_buf_dma[g->rx_head] = new_dma;
@@ -466,38 +468,49 @@ rearm_same:
 	return done;
 }
 
-static void rtl960x_gmac_tx_reclaim(struct rtl960x_gmac *g);
+static int rtl960x_gmac_tx_reclaim(struct rtl960x_gmac *g, int budget);
 
-static int rtl960x_gmac_poll(struct napi_struct *napi, int budget)
+static int rtl960x_gmac_rx_poll(struct napi_struct *napi, int budget)
 {
-	struct rtl960x_gmac *g = container_of(napi, struct rtl960x_gmac, napi);
+	struct rtl960x_gmac *g = container_of(napi, struct rtl960x_gmac, rx_napi);
 	int done;
-
-	/* Reclaim finished TX descriptors and wake the queue if it had filled. */
-	spin_lock(&g->tx_lock);
-	rtl960x_gmac_tx_reclaim(g);
-	if (g->tx_tail != g->tx_head)
-		mod_timer(&g->tx_timer, jiffies + TX_TIMER_DELAY);
-	else
-		timer_delete(&g->tx_timer);
-	if (netif_queue_stopped(g->ndev) &&
-	    (g->tx_head + 1) % TX_RING_SIZE != g->tx_tail)
-		netif_wake_queue(g->ndev);
-	spin_unlock(&g->tx_lock);
 
 	done = rtl960x_gmac_rx(g, budget);
 
 	if (done < budget && napi_complete_done(napi, done))
-		rtl960x_gmac_unmask_irqs(g);
+		rtl960x_gmac_unmask_irqs(g, ISR_RX_ALL);
 
 	return done;
+}
+
+static int rtl960x_gmac_tx_poll(struct napi_struct *napi, int budget)
+{
+	struct rtl960x_gmac *g = container_of(napi, struct rtl960x_gmac, tx_napi);
+	int done;
+
+	spin_lock_bh(&g->tx_lock);
+	done = rtl960x_gmac_tx_reclaim(g, budget);
+	if (netif_queue_stopped(g->ndev) &&
+	    (g->tx_head + 1) % TX_RING_SIZE != g->tx_tail)
+		netif_wake_queue(g->ndev);
+	spin_unlock_bh(&g->tx_lock);
+
+	if (done < budget && napi_complete_done(napi, done))
+		rtl960x_gmac_unmask_irqs(g, ISR_TOK);
+
+	if (done > budget)
+		return budget;
+	else
+		return done;
 }
 
 static irqreturn_t rtl960x_gmac_isr(int irq, void *dev_id)
 {
 	struct rtl960x_gmac *g = dev_id;
-	u16 status = gmac_r16(g, GMAC_ISR) & ISR_NAPI;
+	u16 status = gmac_r16(g, GMAC_ISR);
+	status &= gmac_r16(g, GMAC_IMR);
 
+	status &= ISR_NAPI;
 	if (!status)
 		return IRQ_NONE;
 
@@ -510,9 +523,11 @@ static irqreturn_t rtl960x_gmac_isr(int irq, void *dev_id)
 }
 
 /* Reclaim TX descriptors the HW has finished with. Caller holds tx_lock. */
-static void rtl960x_gmac_tx_reclaim(struct rtl960x_gmac *g)
+static int rtl960x_gmac_tx_reclaim(struct rtl960x_gmac *g, int budget)
 {
-	while (g->tx_tail != g->tx_head) {
+	int done = 0;
+
+	while (g->tx_tail != g->tx_head && done < budget) {
 		struct rtl960x_tx_desc *d = &g->tx_ring[g->tx_tail];
 		struct sk_buff *skb;
 
@@ -527,21 +542,12 @@ static void rtl960x_gmac_tx_reclaim(struct rtl960x_gmac *g)
 			g->ndev->stats.tx_bytes += skb->len;
 			dev_consume_skb_any(skb);
 			g->tx_skb[g->tx_tail] = NULL;
+			done++;
 		}
 		g->tx_tail = (g->tx_tail + 1) % TX_RING_SIZE;
 	}
-}
 
-/*
- * Backstop for TX completions the hardware never signals: with TX_PKT_TMR=0
- * the TOK trigger is packet-count based, so a short tail may not interrupt
- * until later traffic. Scheduling the combined NAPI is idempotent.
- */
-static void rtl960x_gmac_tx_timer(struct timer_list *t)
-{
-	struct rtl960x_gmac *g = timer_container_of(g, t, tx_timer);
-
-	napi_schedule(&g->napi);
+	return done;
 }
 
 static netdev_tx_t rtl960x_gmac_start_xmit(struct sk_buff *skb,
@@ -551,15 +557,12 @@ static netdev_tx_t rtl960x_gmac_start_xmit(struct sk_buff *skb,
 	struct rtl960x_tx_desc *d;
 	dma_addr_t dma;
 	int dest_port = -1;
-	bool tx_empty;
 	bool last;
 	u32 opts1;
 	u32 next;
 	int len;
 
-	spin_lock(&g->tx_lock);
-
-	rtl960x_gmac_tx_reclaim(g);
+	spin_lock_bh(&g->tx_lock);
 
 	next = (g->tx_head + 1) % TX_RING_SIZE;
 	if (next == g->tx_tail) {
@@ -570,7 +573,7 @@ static netdev_tx_t rtl960x_gmac_start_xmit(struct sk_buff *skb,
 		 * the frame is actually going on the ring.
 		 */
 		netif_stop_queue(ndev);
-		spin_unlock(&g->tx_lock);
+		spin_unlock_bh(&g->tx_lock);
 		return NETDEV_TX_BUSY;
 	}
 
@@ -590,20 +593,18 @@ static netdev_tx_t rtl960x_gmac_start_xmit(struct sk_buff *skb,
 	}
 
 	if (skb_put_padto(skb, TX_MIN_LEN)) {
-		spin_unlock(&g->tx_lock);
+		spin_unlock_bh(&g->tx_lock);
 		return NETDEV_TX_OK;		/* skb freed by skb_put_padto */
 	}
 	len = skb->len;
 
 	dma = dma_map_single(g->dev, skb->data, len, DMA_TO_DEVICE);
 	if (dma_mapping_error(g->dev, dma)) {
-		spin_unlock(&g->tx_lock);
+		spin_unlock_bh(&g->tx_lock);
 		ndev->stats.tx_dropped++;
 		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
 	}
-
-	tx_empty = g->tx_tail == g->tx_head;
 
 	last = (g->tx_head == TX_RING_SIZE - 1);
 	d = &g->tx_ring[g->tx_head];
@@ -624,8 +625,6 @@ static netdev_tx_t rtl960x_gmac_start_xmit(struct sk_buff *skb,
 	dma_wmb();
 
 	g->tx_head = next;
-	if (tx_empty)
-		mod_timer(&g->tx_timer, jiffies + TX_TIMER_DELAY);
 
 	/* No room for one more frame: stop now, NAPI wakes us on TX reclaim. */
 	if ((next + 1) % TX_RING_SIZE == g->tx_tail)
@@ -634,7 +633,7 @@ static netdev_tx_t rtl960x_gmac_start_xmit(struct sk_buff *skb,
 	/* Kick the TX ring. */
 	gmac_w32(g, GMAC_IO_CMD, gmac_r32(g, GMAC_IO_CMD) | IO_CMD_TX_POLL);
 
-	spin_unlock(&g->tx_lock);
+	spin_unlock_bh(&g->tx_lock);
 
 	return NETDEV_TX_OK;
 }
@@ -670,7 +669,8 @@ static int rtl960x_gmac_open(struct net_device *ndev)
 		goto err_free_rings;
 	}
 
-	napi_enable(&g->napi);
+	napi_enable(&g->rx_napi);
+	napi_enable(&g->tx_napi);
 	rtl960x_gmac_init_hw(g);
 
 	netif_start_queue(ndev);
@@ -703,8 +703,8 @@ static int rtl960x_gmac_stop(struct net_device *ndev)
 	rtl960x_gmac_stop_hw(g);
 	printk("after stop HW\n");
 
-	napi_disable(&g->napi);
-	timer_delete_sync(&g->tx_timer);
+	napi_disable(&g->rx_napi);
+	napi_disable(&g->tx_napi);
 	free_irq(g->irq, g);
 
 	printk("gmac free\n");
@@ -817,7 +817,6 @@ static int rtl960x_gmac_probe(struct platform_device *pdev)
 	g->ndev = ndev;
 	g->dev = &pdev->dev;
 	spin_lock_init(&g->tx_lock);
-	timer_setup(&g->tx_timer, rtl960x_gmac_tx_timer, 0);
 
 	g->base = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
 	if (IS_ERR(g->base))
@@ -850,7 +849,8 @@ static int rtl960x_gmac_probe(struct platform_device *pdev)
 		return irq;
 	g->irq = irq;
 
-	netif_napi_add(ndev, &g->napi, rtl960x_gmac_poll);
+	netif_napi_add(ndev, &g->rx_napi, rtl960x_gmac_rx_poll);
+	netif_napi_add_tx(ndev, &g->tx_napi, rtl960x_gmac_tx_poll);
 
 	ret = devm_register_netdev(&pdev->dev, ndev);
 	if (ret)
