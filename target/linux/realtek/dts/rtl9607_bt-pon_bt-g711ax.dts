@@ -21,9 +21,6 @@
 	keys {
 		compatible = "gpio-keys";
 
-		pinctrl-0 = <&pinmux_gpio_buttons>;
-		pinctrl-names = "default";
-
 		reset {
 			label = "reset";
 			gpios = <&gpio1 5 GPIO_ACTIVE_LOW>;
@@ -45,9 +42,6 @@
 
 	leds {
 		compatible = "gpio-leds";
-
-		pinctrl-0 = <&pinmux_gpio0_leds>, <&pinmux_gpio1_leds>;
-		pinctrl-names = "default";
 
 		led_power: power {
 			function = LED_FUNCTION_POWER;
