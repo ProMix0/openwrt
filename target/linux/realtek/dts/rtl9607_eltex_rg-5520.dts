@@ -139,20 +139,6 @@
 	nvmem-cell-names = "mac-address";
 };
 
-&pinmux {
-	pinmux_gpio_buttons: gpio-buttons {
-		pinctrl-single,bits = <0x4 0x34 0x34>;
-	};
-
-	pinmux_gpio0_leds: gpio0-leds {
-		pinctrl-single,bits = <0x0 0x301700 0x301700>;
-	};
-
-	pinmux_gpio1_leds: gpio1-leds {
-		pinctrl-single,bits = <0x4 0x1000048 0x1000048>;
-	};
-};
-
 &ecc0 {
 	status = "okay";
 };
@@ -235,17 +221,11 @@
 };
 
 &pcie0 {
-	pinctrl-0 = <&pinmux_pcie0_rst>;
-	pinctrl-names = "default";
-
 	status = "okay";
 	reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>;
 };
 
 &pcie1 {
-	pinctrl-0 = <&pinmux_pcie1_rst>;
-	pinctrl-names = "default";
-
 	status = "okay";
 	reset-gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
 };
