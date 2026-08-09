@@ -21,6 +21,7 @@ rtw89_core-y += core.o \
 		util.o
 
 rtw89_core-$(CONFIG_PM) += wow.o
+rtw89_core-$(CONFIG_RTW89_LEDS) += led.o
 
 obj-$(CONFIG_RTW89_8851B) += rtw89_8851b.o
 rtw89_8851b-objs := rtw8851b.o \
@@ -75,6 +76,15 @@ rtw89_8852c-objs := rtw8852c.o \
 obj-$(CONFIG_RTW89_8852CE) += rtw89_8852ce.o
 rtw89_8852ce-objs := rtw8852ce.o
 
+obj-$(CONFIG_RTW89_8192XB) += rtw89_8192xb.o
+rtw89_8192xb-objs := rtw8192xb.o \
+		     rtw8192xb_table.o \
+		     rtw8192xb_rfk.o \
+		     rtw8192xb_rfk_table.o
+
+obj-$(CONFIG_RTW89_8192XBE) += rtw89_8192xbe.o
+rtw89_8192xbe-objs := rtw8192xbe.o
+
 obj-$(CONFIG_RTW89_8922A) += rtw89_8922a.o
 rtw89_8922a-objs := rtw8922a.o \
 		    rtw8922a_rfk.o
@@ -89,4 +99,3 @@ rtw89_pci-y := pci.o pci_be.o
 
 obj-$(CONFIG_RTW89_USB) += rtw89_usb.o
 rtw89_usb-y := usb.o
-

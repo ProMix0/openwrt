@@ -5,5 +5,6 @@ define Device/bt-pon_bt-g711ax
   DEVICE_VENDOR := BT-PON
   DEVICE_MODEL := BT-G711AX
   $(Device/kernel-lzma)
+  DEVICE_PACKAGES := wpad-basic-mbedtls wifi-scripts wireless-regdb iw
 endef
 TARGET_DEVICES += bt-pon_bt-g711ax

@@ -10,6 +10,7 @@
 #include <linux/dmi.h>
 #include <linux/firmware.h>
 #include <linux/iopoll.h>
+#include <linux/leds.h>
 #include <linux/workqueue.h>
 #include <net/mac80211.h>
 
@@ -149,6 +150,7 @@ enum rtw89_core_chip_id {
 	RTL8852B,
 	RTL8852BT,
 	RTL8852C,
+	RTL8192XB,
 	RTL8851B,
 	RTL8922A,
 };
@@ -3806,6 +3808,11 @@ struct rtw89_chip_ops {
 	void (*btc_wl_s1_standby)(struct rtw89_dev *rtwdev, bool state);
 	void (*btc_set_policy)(struct rtw89_dev *rtwdev, u16 policy_type);
 	void (*btc_set_wl_rx_gain)(struct rtw89_dev *rtwdev, u32 level);
+
+	/* Drive this part's LED pad.  Left NULL by chips whose LED wiring has
+	 * not been established; rtw89_led_init() then registers nothing.
+	 */
+	void (*led_set)(struct led_classdev *led, enum led_brightness brightness);
 };
 
 enum rtw89_dma_ch {
@@ -6089,6 +6096,9 @@ struct rtw89_dev {
 	int napi_budget_countdown;
 
 	struct rtw89_debugfs *debugfs;
+
+	bool led_registered;
+	struct led_classdev led_cdev;
 
 	/* HCI related data, keep last */
 	u8 priv[] __aligned(sizeof(void *));

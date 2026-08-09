@@ -993,7 +993,7 @@ rtw89_debug_priv_mac_reg_dump_select(struct rtw89_dev *rtwdev,
 		return -EINVAL;
 	}
 
-	if (sel == RTW89_DBG_SEL_MAC_30 && chip->chip_id != RTL8852C) {
+	if (sel == RTW89_DBG_SEL_MAC_30 && chip->chip_id != RTL8852C && chip->chip_id != RTL8192XB) {
 		rtw89_info(rtwdev, "sel %d is address hole on chip %d\n", sel,
 			   chip->chip_id);
 		return -EINVAL;
@@ -1163,7 +1163,7 @@ rtw89_debug_priv_mac_mem_dump_get(struct rtw89_dev *rtwdev,
 	if (debugfs_priv->mac_mem.sel >= RTW89_MAC_MEM_NUM)
 		return -ENOENT;
 
-	if (rtwdev->chip->chip_id == RTL8852C) {
+	if (rtwdev->chip->chip_id == RTL8852C || rtwdev->chip->chip_id == RTL8192XB) {
 		switch (debugfs_priv->mac_mem.sel) {
 		case RTW89_MAC_MEM_TXD_FIFO_0_V1:
 		case RTW89_MAC_MEM_TXD_FIFO_1_V1:
@@ -1367,7 +1367,7 @@ static int rtw89_debug_mac_dump_dmac_dbg(struct rtw89_dev *rtwdev,
 			       rtw89_read32(rtwdev, R_AX_WDE_ERR_FLAG_CFG_NUM1));
 		p += scnprintf(p, end - p, "R_AX_PLE_ERR_FLAG_CFG=0x%08x\n",
 			       rtw89_read32(rtwdev, R_AX_PLE_ERR_FLAG_CFG_NUM1));
-		if (chip->chip_id == RTL8852C) {
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 			p += scnprintf(p, end - p,
 				       "R_AX_PLE_ERRFLAG_MSG=0x%08x\n",
 				       rtw89_read32(rtwdev, R_AX_PLE_ERRFLAG_MSG));
@@ -1388,7 +1388,7 @@ static int rtw89_debug_mac_dump_dmac_dbg(struct rtw89_dev *rtwdev,
 			       rtw89_read32(rtwdev, R_AX_WDRLS_ERR_IMR));
 		p += scnprintf(p, end - p, "R_AX_WDRLS_ERR_ISR=0x%08x\n",
 			       rtw89_read32(rtwdev, R_AX_WDRLS_ERR_ISR));
-		if (chip->chip_id == RTL8852C)
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB)
 			p += scnprintf(p, end - p,
 				       "R_AX_RPQ_RXBD_IDX=0x%08x\n",
 				       rtw89_read32(rtwdev, R_AX_RPQ_RXBD_IDX_V1));
@@ -1399,7 +1399,7 @@ static int rtw89_debug_mac_dump_dmac_dbg(struct rtw89_dev *rtwdev,
 	}
 
 	if (dmac_err & B_AX_WSEC_ERR_FLAG) {
-		if (chip->chip_id == RTL8852C) {
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 			p += scnprintf(p, end - p,
 				       "R_AX_SEC_ERR_IMR=0x%08x\n",
 				       rtw89_read32(rtwdev, R_AX_SEC_ERROR_FLAG_IMR));
@@ -1507,7 +1507,7 @@ static int rtw89_debug_mac_dump_dmac_dbg(struct rtw89_dev *rtwdev,
 	}
 
 	if (dmac_err & B_AX_TXPKTCTRL_ERR_FLAG) {
-		if (chip->chip_id == RTL8852C) {
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 			p += scnprintf(p, end - p,
 				       "R_AX_TXPKTCTL_B0_ERRFLAG_IMR=0x%08x\n",
 				       rtw89_read32(rtwdev, R_AX_TXPKTCTL_B0_ERRFLAG_IMR));
@@ -1555,7 +1555,7 @@ static int rtw89_debug_mac_dump_dmac_dbg(struct rtw89_dev *rtwdev,
 			       rtw89_read32(rtwdev, R_AX_PL_CPUQ_OP_2));
 		p += scnprintf(p, end - p, "R_AX_PL_CPUQ_OP_STATUS=0x%08x\n",
 			       rtw89_read32(rtwdev, R_AX_PL_CPUQ_OP_STATUS));
-		if (chip->chip_id == RTL8852C) {
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 			p += scnprintf(p, end - p, "R_AX_RX_CTRL0=0x%08x\n",
 				       rtw89_read32(rtwdev, R_AX_RX_CTRL0));
 			p += scnprintf(p, end - p, "R_AX_RX_CTRL1=0x%08x\n",
@@ -1604,7 +1604,7 @@ static int rtw89_debug_mac_dump_dmac_dbg(struct rtw89_dev *rtwdev,
 	}
 
 	if (dmac_err & B_AX_BBRPT_ERR_FLAG) {
-		if (chip->chip_id == RTL8852C) {
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 			p += scnprintf(p, end - p,
 				       "R_AX_BBRPT_COM_ERR_IMR=0x%08x\n",
 				       rtw89_read32(rtwdev, R_AX_BBRPT_COM_ERR_IMR));
@@ -1642,7 +1642,8 @@ static int rtw89_debug_mac_dump_dmac_dbg(struct rtw89_dev *rtwdev,
 		}
 	}
 
-	if (dmac_err & B_AX_HAXIDMA_ERR_FLAG && chip->chip_id == RTL8852C) {
+	if (dmac_err & B_AX_HAXIDMA_ERR_FLAG &&
+	    (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB)) {
 		p += scnprintf(p, end - p, "R_AX_HAXIDMA_ERR_IMR=0x%08x\n",
 			       rtw89_read32(rtwdev, R_AX_HAXI_IDCT_MSK));
 		p += scnprintf(p, end - p, "R_AX_HAXIDMA_ERR_ISR=0x%08x\n",
@@ -1704,7 +1705,7 @@ static int rtw89_debug_mac_dump_cmac_err(struct rtw89_dev *rtwdev,
 	}
 
 	if (cmac_err & B_AX_DMA_TOP_ERR_IND) {
-		if (chip->chip_id == RTL8852C) {
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 			p += scnprintf(p, end - p,
 				       "R_AX_RX_ERR_FLAG [%d]=0x%08x\n", band,
 				       rtw89_read32(rtwdev, R_AX_RX_ERR_FLAG + offset));
@@ -1720,7 +1721,7 @@ static int rtw89_debug_mac_dump_cmac_err(struct rtw89_dev *rtwdev,
 	}
 
 	if (cmac_err & B_AX_DMA_TOP_ERR_IND || cmac_err & B_AX_WMAC_RX_ERR_IND) {
-		if (chip->chip_id == RTL8852C) {
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 			p += scnprintf(p, end - p,
 				       "R_AX_PHYINFO_ERR_ISR [%d]=0x%08x\n",
 				       band,
@@ -1747,7 +1748,7 @@ static int rtw89_debug_mac_dump_cmac_err(struct rtw89_dev *rtwdev,
 	}
 
 	if (cmac_err & B_AX_WMAC_TX_ERR_IND) {
-		if (chip->chip_id == RTL8852C) {
+		if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 			p += scnprintf(p, end - p,
 				       "R_AX_TRXPTCL_ERROR_INDICA [%d]=0x%08x\n",
 				       band,

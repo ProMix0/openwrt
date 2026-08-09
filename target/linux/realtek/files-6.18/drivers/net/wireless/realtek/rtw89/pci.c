@@ -2545,7 +2545,7 @@ static int rtw89_pci_deglitch_setting(struct rtw89_dev *rtwdev)
 					     PCIE_PHY_GEN2);
 		if (ret)
 			return ret;
-	} else if (chip_id == RTL8852C) {
+	} else if (chip_id == RTL8852C || chip_id == RTL8192XB) {
 		rtw89_write16_clr(rtwdev, R_RAC_DIRECT_OFFSET_G1 + RAC_ANA24 * 2,
 				  B_AX_DEGLITCH);
 		rtw89_write16_clr(rtwdev, R_RAC_DIRECT_OFFSET_G2 + RAC_ANA24 * 2,
@@ -2698,7 +2698,8 @@ static void rtw89_pci_hci_ldo(struct rtw89_dev *rtwdev)
 				  B_AX_PCIE_DIS_L2_CTRL_LDO_HCI);
 		rtw89_write32_clr(rtwdev, R_AX_SYS_SDIO_CTRL,
 				  B_AX_PCIE_DIS_WLSUS_AFT_PDN);
-	} else if (rtwdev->chip->chip_id == RTL8852C) {
+	} else if (rtwdev->chip->chip_id == RTL8852C ||
+		   rtwdev->chip->chip_id == RTL8192XB) {
 		rtw89_write32_clr(rtwdev, R_AX_SYS_SDIO_CTRL,
 				  B_AX_PCIE_DIS_L2_CTRL_LDO_HCI);
 	}
@@ -2723,7 +2724,8 @@ static void rtw89_pci_power_wake_ax(struct rtw89_dev *rtwdev, bool pwr_up)
 
 static void rtw89_pci_autoload_hang(struct rtw89_dev *rtwdev)
 {
-	if (rtwdev->chip->chip_id != RTL8852C)
+	if (rtwdev->chip->chip_id != RTL8852C &&
+	    rtwdev->chip->chip_id != RTL8192XB)
 		return;
 
 	rtw89_write32_set(rtwdev, R_AX_PCIE_BG_CLR, B_AX_BG_CLR_ASYNC_M3);
@@ -2732,7 +2734,8 @@ static void rtw89_pci_autoload_hang(struct rtw89_dev *rtwdev)
 
 static void rtw89_pci_l12_vmain(struct rtw89_dev *rtwdev)
 {
-	if (!(rtwdev->chip->chip_id == RTL8852C && rtwdev->hal.cv == CHIP_CAV))
+	if (!((rtwdev->chip->chip_id == RTL8852C && rtwdev->hal.cv == CHIP_CAV) ||
+	      rtwdev->chip->chip_id == RTL8192XB))
 		return;
 
 	rtw89_write32_set(rtwdev, R_AX_SYS_SDIO_CTRL, B_AX_PCIE_FORCE_PWR_NGAT);
@@ -2740,7 +2743,8 @@ static void rtw89_pci_l12_vmain(struct rtw89_dev *rtwdev)
 
 static void rtw89_pci_gen2_force_ib(struct rtw89_dev *rtwdev)
 {
-	if (!(rtwdev->chip->chip_id == RTL8852C && rtwdev->hal.cv == CHIP_CAV))
+	if (!((rtwdev->chip->chip_id == RTL8852C && rtwdev->hal.cv == CHIP_CAV) ||
+	      rtwdev->chip->chip_id == RTL8192XB))
 		return;
 
 	rtw89_write32_set(rtwdev, R_AX_PMC_DBG_CTRL2,
@@ -2752,7 +2756,8 @@ static void rtw89_pci_gen2_force_ib(struct rtw89_dev *rtwdev)
 
 static void rtw89_pci_l1_ent_lat(struct rtw89_dev *rtwdev)
 {
-	if (rtwdev->chip->chip_id != RTL8852C)
+	if (rtwdev->chip->chip_id != RTL8852C &&
+	    rtwdev->chip->chip_id != RTL8192XB)
 		return;
 
 	rtw89_write32_clr(rtwdev, R_AX_PCIE_PS_CTRL_V1, B_AX_SEL_REQ_ENTR_L1);
@@ -2760,7 +2765,8 @@ static void rtw89_pci_l1_ent_lat(struct rtw89_dev *rtwdev)
 
 static void rtw89_pci_wd_exit_l1(struct rtw89_dev *rtwdev)
 {
-	if (rtwdev->chip->chip_id != RTL8852C)
+	if (rtwdev->chip->chip_id != RTL8852C &&
+	    rtwdev->chip->chip_id != RTL8192XB)
 		return;
 
 	rtw89_write32_set(rtwdev, R_AX_PCIE_PS_CTRL_V1, B_AX_DMAC0_EXIT_L1_EN);
@@ -2768,7 +2774,8 @@ static void rtw89_pci_wd_exit_l1(struct rtw89_dev *rtwdev)
 
 static void rtw89_pci_set_sic(struct rtw89_dev *rtwdev)
 {
-	if (rtwdev->chip->chip_id == RTL8852C)
+	if (rtwdev->chip->chip_id == RTL8852C ||
+	    rtwdev->chip->chip_id == RTL8192XB)
 		return;
 
 	rtw89_write32_clr(rtwdev, R_AX_PCIE_EXP_CTRL,
@@ -2799,7 +2806,8 @@ static void rtw89_pci_set_io_rcy(struct rtw89_dev *rtwdev)
 	const struct rtw89_pci_info *info = rtwdev->pci_info;
 	u32 val32;
 
-	if (rtwdev->chip->chip_id != RTL8852C)
+	if (rtwdev->chip->chip_id != RTL8852C &&
+	    rtwdev->chip->chip_id != RTL8192XB)
 		return;
 
 	if (info->io_rcy_en == MAC_AX_PCIE_ENABLE) {
@@ -2818,7 +2826,9 @@ static void rtw89_pci_set_io_rcy(struct rtw89_dev *rtwdev)
 		rtw89_write32_clr(rtwdev, R_AX_PCIE_IO_RCY_E0, B_AX_PCIE_IO_RCY_WDT_MODE_E0);
 	}
 
-	rtw89_write32_clr(rtwdev, R_AX_PCIE_IO_RCY_S1, B_AX_PCIE_IO_RCY_WDT_MODE_S1);
+	/* IO_RCY_S1 clear is vendor-gated 8852C-only; 8192XB skips it. */
+	if (rtwdev->chip->chip_id == RTL8852C)
+		rtw89_write32_clr(rtwdev, R_AX_PCIE_IO_RCY_S1, B_AX_PCIE_IO_RCY_WDT_MODE_S1);
 }
 
 static void rtw89_pci_set_dbg(struct rtw89_dev *rtwdev)
@@ -2977,7 +2987,7 @@ static int rtw89_pci_mode_op(struct rtw89_dev *rtwdev)
 	if (chip_id == RTL8852A || rtw89_is_rtl885xb(rtwdev)) {
 		rtw89_write32_mask(rtwdev, R_AX_PCIE_INIT_CFG1, B_AX_PCIE_MAX_TXDMA_MASK, tx_burst);
 		rtw89_write32_mask(rtwdev, R_AX_PCIE_INIT_CFG1, B_AX_PCIE_MAX_RXDMA_MASK, rx_burst);
-	} else if (chip_id == RTL8852C) {
+	} else if (chip_id == RTL8852C || chip_id == RTL8192XB) {
 		rtw89_write32_mask(rtwdev, R_AX_HAXI_INIT_CFG1, B_AX_HAXI_MAX_TXDMA_MASK, tx_burst);
 		rtw89_write32_mask(rtwdev, R_AX_HAXI_INIT_CFG1, B_AX_HAXI_MAX_RXDMA_MASK, rx_burst);
 	}
@@ -3002,7 +3012,7 @@ static int rtw89_pci_mode_op(struct rtw89_dev *rtwdev)
 				   wd_dma_idle_intvl);
 		rtw89_write32_mask(rtwdev, R_AX_PCIE_INIT_CFG2, B_AX_WD_ITVL_ACT,
 				   wd_dma_act_intvl);
-	} else if (chip_id == RTL8852C) {
+	} else if (chip_id == RTL8852C || chip_id == RTL8192XB) {
 		rtw89_write32_mask(rtwdev, R_AX_HAXI_INIT_CFG1, B_AX_WD_ITVL_IDLE_V1_MASK,
 				   wd_dma_idle_intvl);
 		rtw89_write32_mask(rtwdev, R_AX_HAXI_INIT_CFG1, B_AX_WD_ITVL_ACT_V1_MASK,
@@ -4208,7 +4218,7 @@ static void rtw89_pci_aspm_set_ax(struct rtw89_dev *rtwdev, bool enable)
 			ret = rtw89_pci_config_byte_clr(rtwdev,
 							RTW89_PCIE_L1_CTRL,
 							RTW89_PCIE_BIT_L1);
-	} else if (chip_id == RTL8852C) {
+	} else if (chip_id == RTL8852C || chip_id == RTL8192XB) {
 		if (enable)
 			rtw89_write32_set(rtwdev, R_AX_PCIE_MIX_CFG_V1,
 					  B_AX_ASPM_CTRL_L1);
@@ -4310,12 +4320,18 @@ static void rtw89_pci_l1ss_set_ax(struct rtw89_dev *rtwdev, bool enable)
 		if (ret)
 			rtw89_err(rtwdev, "failed to %s L1SS, ret=%d",
 				  enable ? "set" : "unset", ret);
-	} else if (chip_id == RTL8852C) {
-		ret = rtw89_pci_config_byte_clr(rtwdev, RTW89_PCIE_L1SS_STS_V1,
-						RTW89_PCIE_BIT_ASPM_L11 |
-						RTW89_PCIE_BIT_PCI_L11);
-		if (ret)
-			rtw89_warn(rtwdev, "failed to unset ASPM L1.1, ret=%d", ret);
+	} else if (chip_id == RTL8852C || chip_id == RTL8192XB) {
+		/* The ASPM-L1.1 STS clear maps to the vendor _patch_l11_exit(),
+		 * which is NOT in the 8192XB call graph -- keep it 8852C-only.
+		 * The L1SUB_DISABLE toggle is shared by both chips.
+		 */
+		if (chip_id == RTL8852C) {
+			ret = rtw89_pci_config_byte_clr(rtwdev, RTW89_PCIE_L1SS_STS_V1,
+							RTW89_PCIE_BIT_ASPM_L11 |
+							RTW89_PCIE_BIT_PCI_L11);
+			if (ret)
+				rtw89_warn(rtwdev, "failed to unset ASPM L1.1, ret=%d", ret);
+		}
 		if (enable)
 			rtw89_write32_clr(rtwdev, R_AX_PCIE_MIX_CFG_V1,
 					  B_AX_L1SUB_DISABLE);
@@ -4375,7 +4391,8 @@ static int rtw89_pci_lv1rst_stop_dma_ax(struct rtw89_dev *rtwdev)
 	u32 val;
 	int ret;
 
-	if (rtwdev->chip->chip_id == RTL8852C)
+	if (rtwdev->chip->chip_id == RTL8852C ||
+	    rtwdev->chip->chip_id == RTL8192XB)
 		return 0;
 
 	rtw89_pci_ctrl_dma_all(rtwdev, false);
@@ -4404,7 +4421,8 @@ static int rtw89_pci_lv1rst_start_dma_ax(struct rtw89_dev *rtwdev)
 {
 	int ret;
 
-	if (rtwdev->chip->chip_id == RTL8852C)
+	if (rtwdev->chip->chip_id == RTL8852C ||
+	    rtwdev->chip->chip_id == RTL8192XB)
 		return 0;
 
 	rtw89_mac_ctrl_hci_dma_trx(rtwdev, false);
@@ -4452,7 +4470,8 @@ static void rtw89_pci_ops_dump_err_status(struct rtw89_dev *rtwdev)
 	if (rtwdev->chip->chip_gen == RTW89_CHIP_BE)
 		return;
 
-	if (rtwdev->chip->chip_id == RTL8852C) {
+	if (rtwdev->chip->chip_id == RTL8852C ||
+	    rtwdev->chip->chip_id == RTL8192XB) {
 		rtw89_info(rtwdev, "R_AX_DBG_ERR_FLAG=0x%08x\n",
 			   rtw89_read32(rtwdev, R_AX_DBG_ERR_FLAG_V1));
 		rtw89_info(rtwdev, "R_AX_LBC_WATCHDOG=0x%08x\n",
@@ -4549,7 +4568,8 @@ static int __maybe_unused rtw89_pci_suspend(struct device *dev)
 
 static void rtw89_pci_l2_hci_ldo(struct rtw89_dev *rtwdev)
 {
-	if (rtwdev->chip->chip_id == RTL8852C)
+	if (rtwdev->chip->chip_id == RTL8852C ||
+	    rtwdev->chip->chip_id == RTL8192XB)
 		return;
 
 	/* Hardware need write the reg twice to ensure the setting work */

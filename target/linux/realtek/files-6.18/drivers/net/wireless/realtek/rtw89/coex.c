@@ -316,6 +316,8 @@ static char *chip_id_str(u32 id)
 		return "RTL8852B";
 	case RTL8852C:
 		return "RTL8852C";
+	case RTL8192XB:
+		return "RTL8192XB";
 	case RTL8852BT:
 		return "RTL8852BT";
 	case RTL8851B:
@@ -10781,7 +10783,7 @@ static void _get_gnt(struct rtw89_dev *rtwdev, struct rtw89_mac_ax_coex_gnt *gnt
 		gnt->gnt_bt = !!(status & B_AX_GNT_BT_RFC_S1_STA);
 		gnt->gnt_wl_sw_en = !!(val & B_AX_GNT_WL_RFC_S1_SW_CTRL);
 		gnt->gnt_wl = !!(status & B_AX_GNT_WL_RFC_S1_STA);
-	} else if (chip->chip_id == RTL8852C) {
+	} else if (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) {
 		val = rtw89_read32(rtwdev, R_AX_GNT_SW_CTRL);
 		status = rtw89_read32(rtwdev, R_AX_GNT_VAL_V1);
 
@@ -10881,7 +10883,7 @@ static int _show_mreg_v1(struct rtw89_dev *rtwdev, char *buf, size_t bufsz)
 	p += scnprintf(p, end - p,
 		       " %-15s : pta_owner:%s, phy-0[gnt_wl:%s-%d/gnt_bt:%s-%d], ",
 		       "[gnt_status]",
-		       chip->chip_id == RTL8852C ? "HW" :
+		       (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) ? "HW" :
 		       btc->dm.pta_owner == BTC_CTRL_BY_WL ? "WL" : "BT",
 		       gnt.gnt_wl_sw_en ? "SW" : "HW", gnt.gnt_wl,
 		       gnt.gnt_bt_sw_en ? "SW" : "HW", gnt.gnt_bt);
@@ -10966,7 +10968,7 @@ static int _show_mreg_v2(struct rtw89_dev *rtwdev, char *buf, size_t bufsz)
 	p += scnprintf(p, end - p,
 		       " %-15s : pta_owner:%s, phy-0[gnt_wl:%s-%d/gnt_bt:%s-%d], polut_type:%s",
 		       "[gnt_status]",
-		       chip->chip_id == RTL8852C ? "HW" :
+		       (chip->chip_id == RTL8852C || chip->chip_id == RTL8192XB) ? "HW" :
 		       btc->dm.pta_owner == BTC_CTRL_BY_WL ? "WL" : "BT",
 		       gnt.gnt_wl_sw_en ? "SW" : "HW", gnt.gnt_wl,
 		       gnt.gnt_bt_sw_en ? "SW" : "HW", gnt.gnt_bt,
