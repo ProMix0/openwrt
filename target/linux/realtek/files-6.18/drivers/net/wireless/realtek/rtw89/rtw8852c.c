@@ -17,6 +17,8 @@
 #include "util.h"
 
 #define RTW8852C_FW_FORMAT_MAX 2
+// Change to test RTL8852D compatibility
+//#define RTW8852C_FW_BASENAME "rtw89/rtw8852d_fw"
 #define RTW8852C_FW_BASENAME "rtw89/rtw8852c_fw"
 #define RTW8852C_MODULE_FIRMWARE \
 	RTW8852C_FW_BASENAME "-" __stringify(RTW8852C_FW_FORMAT_MAX) ".bin"
@@ -230,16 +232,18 @@ static int rtw8852c_pwr_on_func(struct rtw89_dev *rtwdev)
 
 	ret = read_poll_timeout(rtw89_read32, val32, val32 & B_AX_RDY_SYSPWR,
 				1000, 20000, false, rtwdev, R_AX_SYS_PW_CTRL);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 
 	rtw89_write32_set(rtwdev, R_AX_SYS_PW_CTRL, B_AX_EN_WLON);
 	rtw89_write32_set(rtwdev, R_AX_SYS_PW_CTRL, B_AX_APFN_ONMAC);
 
 	ret = read_poll_timeout(rtw89_read32, val32, !(val32 & B_AX_APFN_ONMAC),
 				1000, 20000, false, rtwdev, R_AX_SYS_PW_CTRL);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 
 	rtw89_write8_set(rtwdev, R_AX_PLATFORM_ENABLE, B_AX_PLATFORM_EN);
 	rtw89_write8_clr(rtwdev, R_AX_PLATFORM_ENABLE, B_AX_PLATFORM_EN);
@@ -260,43 +264,54 @@ static int rtw8852c_pwr_on_func(struct rtw89_dev *rtwdev)
 
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL,
 				      XTAL_SI_GND_SHDN_WL, XTAL_SI_GND_SHDN_WL);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 
 	rtw89_write32_set(rtwdev, R_AX_SYS_ADIE_PAD_PWR_CTRL, B_AX_SYM_PADPDN_WL_RFC_1P3);
 
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL,
 				      XTAL_SI_SHDN_WL, XTAL_SI_SHDN_WL);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, XTAL_SI_OFF_WEI,
 				      XTAL_SI_OFF_WEI);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, XTAL_SI_OFF_EI,
 				      XTAL_SI_OFF_EI);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, 0, XTAL_SI_RFC2RF);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, XTAL_SI_PON_WEI,
 				      XTAL_SI_PON_WEI);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, XTAL_SI_PON_EI,
 				      XTAL_SI_PON_EI);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, 0, XTAL_SI_SRAM2RFC);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_XTAL_XMD_2, 0x10, XTAL_SI_LDO_LPS);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_XTAL_XMD_4, 0, XTAL_SI_LPS_CAP);
-	if (ret)
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
 		return ret;
+		}
 
 	rtw89_write32_set(rtwdev, R_AX_PMC_DBG_CTRL2, B_AX_SYSON_DIS_PMCR_AX_WRMSK);
 	rtw89_write32_set(rtwdev, R_AX_SYS_ISO_CTRL, B_AX_ISO_EB2CORE);
@@ -337,30 +352,38 @@ static int rtw8852c_pwr_off_func(struct rtw89_dev *rtwdev)
 
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, XTAL_SI_RFC2RF,
 				      XTAL_SI_RFC2RF);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, 0, XTAL_SI_OFF_EI);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, 0, XTAL_SI_OFF_WEI);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_WL_RFC_S0, 0, XTAL_SI_RF00);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_WL_RFC_S1, 0, XTAL_SI_RF10);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, XTAL_SI_SRAM2RFC,
 				      XTAL_SI_SRAM2RFC);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, 0, XTAL_SI_PON_EI);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, 0, XTAL_SI_PON_WEI);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 
 	rtw89_write32_set(rtwdev, R_AX_SYS_PW_CTRL, B_AX_EN_WLON);
 	rtw89_write32_clr(rtwdev, R_AX_WLRF_CTRL, B_AX_AFC_AFEDIG);
@@ -370,21 +393,24 @@ static int rtw8852c_pwr_off_func(struct rtw89_dev *rtwdev)
 	rtw89_write32_clr(rtwdev, R_AX_SYS_ADIE_PAD_PWR_CTRL, B_AX_SYM_PADPDN_WL_RFC_1P3);
 
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, 0, XTAL_SI_SHDN_WL);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 
 	rtw89_write32_clr(rtwdev, R_AX_SYS_ADIE_PAD_PWR_CTRL, B_AX_SYM_PADPDN_WL_PTA_1P3);
 
 	ret = rtw89_mac_write_xtal_si(rtwdev, XTAL_SI_ANAPAR_WL, 0, XTAL_SI_GND_SHDN_WL);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 
 	rtw89_write32_set(rtwdev, R_AX_SYS_PW_CTRL, B_AX_APFM_OFFMAC);
 
 	ret = read_poll_timeout(rtw89_read32, val32, !(val32 & B_AX_APFM_OFFMAC),
 				1000, 20000, false, rtwdev, R_AX_SYS_PW_CTRL);
-	if (ret)
-		return ret;
+	if (ret){
+	printk("%s:%d fail here\n", __func__, __LINE__);
+		return ret;}
 
 	rtw89_write32(rtwdev, R_AX_WLLPS_CTRL, SW_LPS_OPTION);
 	rtw89_write32_set(rtwdev, R_AX_SYS_PW_CTRL, B_AX_XTAL_OFF_A_DIE);
@@ -419,8 +445,12 @@ static void rtw8852c_e_efuse_parsing(struct rtw89_efuse *efuse,
 	efuse->rfe_type = map->rfe_type;
 	efuse->xtal_cap = map->xtal_k;
 
-	if (efuse->rfe_type == 0xff)
-		efuse->rfe_type = RTW8852C_RFE_TYPE_BLANK_EFUSE;
+	if (efuse->rfe_type == 0xff) {
+	printk("%s:%d ignore RFE53 shit\n", __func__, __LINE__);
+		// Holy hell, DOM.RU have got RFE 54
+		efuse->rfe_type = 54;
+		//efuse->rfe_type = 50;
+		}
 }
 
 static void rtw8852c_efuse_parsing_tssi(struct rtw89_dev *rtwdev,

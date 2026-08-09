@@ -112,6 +112,10 @@ static const struct pci_device_id rtw89_8852ce_id_table[] = {
 		PCI_DEVICE(PCI_VENDOR_ID_REALTEK, 0xc852),
 		.driver_data = (kernel_ulong_t)&rtw89_8852ce_info,
 	},
+	{
+		PCI_DEVICE(PCI_VENDOR_ID_REALTEK, 0x885d),
+		.driver_data = (kernel_ulong_t)&rtw89_8852ce_info,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(pci, rtw89_8852ce_id_table);

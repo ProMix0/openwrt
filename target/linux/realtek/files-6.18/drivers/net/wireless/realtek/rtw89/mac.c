@@ -1274,8 +1274,10 @@ static int rtw89_mac_sub_pwr_seq(struct rtw89_dev *rtwdev, u8 cv_msk,
 			rtw89_write8(rtwdev, addr, val);
 			break;
 		case PWR_CMD_POLL:
-			if (pwr_cmd_poll(rtwdev, cur_cfg))
+			if (pwr_cmd_poll(rtwdev, cur_cfg)){
+		printk("%s:%d poll busy\n", __func__, __LINE__);
 				return -EBUSY;
+				}
 			break;
 		case PWR_CMD_DELAY:
 			if (cur_cfg->val == PWR_DELAY_US)
@@ -1284,6 +1286,7 @@ static int rtw89_mac_sub_pwr_seq(struct rtw89_dev *rtwdev, u8 cv_msk,
 				fsleep(cur_cfg->addr * 1000);
 			break;
 		default:
+		printk("%s:%d inval\n", __func__, __LINE__);
 			return -EINVAL;
 		}
 	}
@@ -1488,8 +1491,10 @@ static int rtw89_mac_power_switch(struct rtw89_dev *rtwdev, bool on)
 	}
 
 	ret = cfg_func ? cfg_func(rtwdev) : rtw89_mac_pwr_seq(rtwdev, cfg_seq);
-	if (ret)
+	if (ret){
+		printk("%s:%d cfg func 0x%x failed\n", __func__, __LINE__, (int)cfg_func);
 		return ret;
+		}
 
 	if (on) {
 		if (!test_bit(RTW89_FLAG_PROBE_DONE, rtwdev->flags))
@@ -1521,6 +1526,7 @@ int rtw89_mac_pwr_on(struct rtw89_dev *rtwdev)
 	ret = rtw89_mac_power_switch(rtwdev, true);
 	if (ret) {
 		rtw89_mac_power_switch(rtwdev, false);
+		mdelay(1000); // test
 		ret = rtw89_mac_power_switch(rtwdev, true);
 		if (ret)
 			return ret;
@@ -4084,33 +4090,43 @@ int rtw89_mac_init(struct rtw89_dev *rtwdev)
 	int ret;
 
 	ret = rtw89_mac_pwr_on(rtwdev);
-	if (ret)
+	if (ret){
+		printk("%s:%d fail here\n", __func__, __LINE__);
 		return ret;
+		}
 
 	ret = rtw89_mac_partial_init(rtwdev, include_bb);
-	if (ret)
+	if (ret){
+		printk("%s:%d fail here\n", __func__, __LINE__);
 		goto fail;
+		}
 
 	ret = rtw89_chip_enable_bb_rf(rtwdev);
-	if (ret)
-		goto fail;
+	if (ret){
+		printk("%s:%d fail here\n", __func__, __LINE__);
+		goto fail;}
 
 	ret = mac->sys_init(rtwdev);
-	if (ret)
-		goto fail;
+	if (ret){
+		printk("%s:%d fail here\n", __func__, __LINE__);
+		goto fail;}
 
 	ret = mac->trx_init(rtwdev);
-	if (ret)
-		goto fail;
+	if (ret){
+		printk("%s:%d fail here\n", __func__, __LINE__);
+		goto fail;}
 
 	ret = rtw89_mac_feat_init(rtwdev);
-	if (ret)
-		goto fail;
+	if (ret){
+		printk("%s:%d fail here\n", __func__, __LINE__);
+		goto fail;}
 
 	if (rtwdev->hci.ops->mac_post_init) {
 		ret = rtwdev->hci.ops->mac_post_init(rtwdev);
-		if (ret)
+		if (ret){
+		printk("%s:%d fail here\n", __func__, __LINE__);
 			goto fail;
+			}
 	}
 
 	rtw89_fw_send_all_early_h2c(rtwdev);

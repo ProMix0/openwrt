@@ -1694,6 +1694,7 @@ void rtw89_phy_init_bb_reg(struct rtw89_dev *rtwdev)
 
 	rtw89_chip_init_txpwr_unit(rtwdev);
 
+	printk("%s:%d do bb gain %d\n", __func__, __LINE__, (int)elm_info->bb_gain);
 	bb_gain_table = elm_info->bb_gain ? elm_info->bb_gain : chip->bb_gain_table;
 	if (bb_gain_table)
 		rtw89_phy_init_reg(rtwdev, bb_gain_table,
@@ -4872,6 +4873,8 @@ void rtw89_phy_cfo_track_work(struct wiphy *wiphy, struct wiphy_work *work)
 						cfo_track_work.work);
 	struct rtw89_cfo_tracking_info *cfo = &rtwdev->cfo_tracking;
 
+	return; // Unsupported with shared XTAL
+
 	lockdep_assert_wiphy(wiphy);
 
 	if (!cfo->cfo_trig_by_timer_en)
@@ -4890,11 +4893,20 @@ static void rtw89_phy_cfo_start_work(struct rtw89_dev *rtwdev)
 				 msecs_to_jiffies(cfo->cfo_timer_ms));
 }
 
+// TODO track SHARE_XTAL in g6:
+// - CONFIG_*_SHARE_XTAL
+// - is_indiv_xtal
+// - BB_CFO_TRK
+// - HALBB_SHARE_XSTAL_SUPPORT
+// - DRV_BB_CFO_TRK_DISABLE_BY_SHARE_XTAL
+
 void rtw89_phy_cfo_track(struct rtw89_dev *rtwdev)
 {
 	struct rtw89_cfo_tracking_info *cfo = &rtwdev->cfo_tracking;
 	struct rtw89_traffic_stats *stats = &rtwdev->stats;
 	bool is_ul_ofdma = false, ofdma_acc_en = false;
+
+	return; // Unsupported with shared XTAL
 
 	if (stats->rx_tf_periodic > CFO_TF_CNT_TH)
 		is_ul_ofdma = true;
