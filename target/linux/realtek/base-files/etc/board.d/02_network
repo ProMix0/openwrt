@@ -28,6 +28,11 @@ realtek_setup_interfaces()
 		# No DSA switch driver yet.
 		ucidef_set_interface_lan "eth0"
 		;;
+	eltex,rg-5520)
+		# No WAN right now
+		ucidef_set_interface_lan "$lan_list"
+		#ucidef_set_interfaces_lan_wan "$lan_list" ""
+		;;
 	*)
 		ucidef_set_bridge_device switch
 		ucidef_set_interface_lan "$lan_list"
@@ -186,6 +191,9 @@ realtek_setup_macs()
 		lan_mac_start=$lan_mac
 		eth0_mac=$lan_mac
 		;;
+	eltex,rg-5520)
+		lan_mac=$(mtd_get_mac_text factory 0x64)
+		eth0_mac=$lan_mac
 	esac
 
 	[ -n "$eth0_mac" ] && ucidef_set_network_device_mac eth0 $eth0_mac
