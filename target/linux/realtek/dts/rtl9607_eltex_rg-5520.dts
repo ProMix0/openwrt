@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+
+/dts-v1/;
+
+#include "rtl960x.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
+
+/ {
+	compatible = "eltex,rg-5520", "realtek,rtl9607c-soc";
+
+	model = "Eltex RG-5520";
+
+	aliases {
+		label-mac-device = &gmac0;
+	};
+};
+
+&switch0 {
+	ethernet-ports {
+		SWITCH_PORT(0, 1, internal)
+		SWITCH_PORT(1, 2, internal)
+		SWITCH_PORT(2, 3, internal)
+		SWITCH_PORT(3, 4, internal)
+	};
+};
+
+&gmac0 {
+	nvmem-cells = <&macaddr_factory 0>;
+	nvmem-cell-names = "mac-address";
+};
+
+&ecc0 {
+	status = "okay";
+};
+
+&snand {
+	status = "okay";
+
+	flash@0 {
+		// TODO enable x2/x4
+		compatible = "spi-nand";
+		reg = <0>;
+
+		nand-ecc-engine = <&ecc0>;
+		nand-ecc-strength = <6>;
+		nand-ecc-step-size = <512>;
+		nand-ecc-algo = "bch";
+		nand-ecc-placement = "oob";
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "u-boot";
+				reg = <0x0 0xc0000>;
+				read-only;
+			};
+
+			partition@c0000 {
+				label = "factory";
+				reg = <0xc0000 0x20000>;
+				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_factory: macaddr@64 {
+						compatible = "mac-base";
+						reg = <0x64 0x11>;
+						#nvmem-cell-cells = <1>;
+					};
+				};
+			};
+
+			partition@e0000 {
+				compatible = "u-boot,env-redundant-count";
+				label = "u-boot-env";
+				reg = <0xe0000 0x20000>;
+			};
+
+			partition@100000 {
+				compatible = "u-boot,env-redundant-count";
+				label = "u-boot-env2";
+				reg = <0x100000 0x20000>;
+			};
+
+			// TODO handle correst rootfs mounting (see CONFIG_MTD_ROOTFS_ROOT_DEV)
+			partition@120000 {
+				label = "ubi";
+				reg = <0x120000 0x7940000>;
+			};
+
+			partition@140000 {
+				label = "mtdoops";
+				reg = <0x7a40000 0x200000>;
+				read-only;
+			};
+		};
+	};
+};
