@@ -56,3 +56,22 @@ define KernelPackage/hasivo-mcu-sensor/description
 endef
 
 $(eval $(call KernelPackage,hasivo-mcu-sensor))
+
+define KernelPackage/my-rtw89
+  SUBMENU:=WTF TMP
+  TITLE:=my-rtw89
+  KCONFIG:=CONFIG_RTW89 CONFIG_RTW89_8852BE
+  FILES:=$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_core.ko \
+	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_pci.ko \
+	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852b_common.ko \
+	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852b.ko \
+	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852be.ko
+  DEPENDS:=@TARGET_realtek
+#  AUTOLOAD:=$(call AutoLoad,30,aoe)
+endef
+
+define KernelPackage/my-rtw89/description
+ No description here for you!
+endef
+
+$(eval $(call KernelPackage,my-rtw89))
