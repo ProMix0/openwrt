@@ -66,6 +66,9 @@ rtw89_8852bt-objs := rtw8852bt.o \
 obj-$(CONFIG_RTW89_8852BTE) += rtw89_8852bte.o
 rtw89_8852bte-objs := rtw8852bte.o
 
+obj-$(CONFIG_RTW89_8832BR) += rtw89_8832bre.o
+rtw89_8832bre-objs := rtw8832bre.o rtw8832br.o rtw8832br_common.o rtw8832br_rfk.o rtw8832br_table.o rtw8832br_rfk_table.o
+
 obj-$(CONFIG_RTW89_8852C) += rtw89_8852c.o
 rtw89_8852c-objs := rtw8852c.o \
 		    rtw8852c_table.o \

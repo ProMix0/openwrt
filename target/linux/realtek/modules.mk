@@ -60,12 +60,15 @@ $(eval $(call KernelPackage,hasivo-mcu-sensor))
 define KernelPackage/my-rtw89
   SUBMENU:=WTF TMP
   TITLE:=my-rtw89
-  KCONFIG:=CONFIG_RTW89 CONFIG_RTW89_8852BE
+  KCONFIG:=CONFIG_RTW89 CONFIG_RTW89_8832BR
+#  FILES:=$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_core.ko \
+#	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_pci.ko \
+#	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852b_common.ko \
+#	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852b.ko \
+#	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852be.ko
   FILES:=$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_core.ko \
 	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_pci.ko \
-	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852b_common.ko \
-	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852b.ko \
-	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8852be.ko
+	$(LINUX_DIR)/drivers/net/wireless/realtek/rtw89/rtw89_8832bre.ko
   DEPENDS:=@TARGET_realtek
 #  AUTOLOAD:=$(call AutoLoad,30,aoe)
 endef
