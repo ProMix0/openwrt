@@ -146,6 +146,7 @@ enum rtw89_hci_dle_type {
 
 enum rtw89_core_chip_id {
 	RTL8852A,
+	RTL8832BR,
 	RTL8852B,
 	RTL8852BT,
 	RTL8852C,
