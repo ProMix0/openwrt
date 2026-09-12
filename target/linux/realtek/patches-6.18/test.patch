@@ -1,0 +1,258 @@
+diff --git a/drivers/mtd/nand/ecc-realtek.c b/drivers/mtd/nand/ecc-realtek.c
+index 7d003fd72027..5d869244c9e0 100644
+--- a/drivers/mtd/nand/ecc-realtek.c
++++ b/drivers/mtd/nand/ecc-realtek.c
+@@ -3,6 +3,8 @@
+  * Support for Realtek hardware ECC engine in RTL93xx SoCs
+  */
+ 
++#define DEBUG
++
+ #include <linux/bitfield.h>
+ #include <linux/dma-mapping.h>
+ #include <linux/mtd/nand.h>
+@@ -119,7 +121,7 @@ static int rtl_ecc_ooblayout_ecc(struct mtd_info *mtd, int section,
+ 	if (section < 0 || section >= ctx->steps)
+ 		return -ERANGE;
+ 
+-	oobregion->offset = ctx->steps * RTL_ECC_FREE_SIZE + section * ctx->parity_size;
++	oobregion->offset = ctx->steps * RTL_ECC_FREE_SIZE + section * ctx->parity_size + 64;
+ 	oobregion->length = ctx->parity_size;
+ 
+ 	return 0;
+@@ -137,7 +139,7 @@ static int rtl_ecc_ooblayout_free(struct mtd_info *mtd, int section,
+ 
+ 	/* reserve 2 BBM bytes in first block */
+ 	bbm = section ? 0 : 2;
+-	oobregion->offset = section * RTL_ECC_FREE_SIZE + bbm;
++	oobregion->offset = section * RTL_ECC_FREE_SIZE + bbm + 64;
+ 	oobregion->length = RTL_ECC_FREE_SIZE - bbm;
+ 
+ 	return 0;
+@@ -176,13 +178,20 @@ static int rtl_ecc_wait_for_engine(struct rtl_ecc_ctx *ctx)
+ 
+ 	ret = regmap_read_poll_timeout(rtlc->regmap, RTL_ECC_STATUS, status,
+ 				       !(status & RTL_ECC_OP_STATUS), 12, 1000000);
+-	if (ret)
++	if (ret) {
++	printk("%s:%d TIMEOUT\n", __func__, __LINE__);
+ 		return ret;
++		}
+ 
+ 	ret = FIELD_GET(RTL_ECC_RESULT, status);
+ 	all_one = FIELD_GET(RTL_ECC_ALL_ONE, status);
+ 	bitflips = FIELD_GET(RTL_ECC_CORR_COUNT, status);
+ 
++	if (ret) {
++	printk("%s:%d ret %d\n", __func__, __LINE__, ret);
++
++	}
++
+ 	/* For erased blocks (all bits one) error status can be ignored */
+ 	if (all_one)
+ 		ret = 0;
+@@ -202,6 +211,8 @@ static int rtl_ecc_run_engine(struct rtl_ecc_ctx *ctx, char *data, char *free,
+ 	mutex_lock(&rtlc->lock);
+ 
+ 	memcpy(buf_data, data, RTL_ECC_BLOCK_SIZE);
++	// TODO try 0?
++//	memset(buf_free, 0, RTL_ECC_DMA_FREE_PARITY_SIZE);
+ 	memcpy(buf_free, free, RTL_ECC_FREE_SIZE);
+ 	memcpy(buf_parity, parity, ctx->parity_size);
+ 
+@@ -213,7 +224,9 @@ static int rtl_ecc_run_engine(struct rtl_ecc_ctx *ctx, char *data, char *free,
+ 	if (ret >= 0) {
+ 		memcpy(data, buf_data, RTL_ECC_BLOCK_SIZE);
+ 		memcpy(free, buf_free, RTL_ECC_FREE_SIZE);
+-		memcpy(parity, buf_parity, ctx->parity_size);
++		if (operation == RTL_ECC_OP_ENCODE) {
++			memcpy(parity, buf_parity, ctx->parity_size);
++		}
+ 	}
+ 
+ 	mutex_unlock(&rtlc->lock);
+@@ -221,24 +234,35 @@ static int rtl_ecc_run_engine(struct rtl_ecc_ctx *ctx, char *data, char *free,
+ 	return ret;
+ }
+ 
++void dump_data(u8*data, int len);
++
+ static int rtl_ecc_prepare_io_req(struct nand_device *nand, struct nand_page_io_req *req)
+ {
+ 	struct rtl_ecc_engine *rtlc = nand_to_rtlc(nand);
+ 	struct rtl_ecc_ctx *ctx = nand_to_ctx(nand);
+ 	char *data, *free, *parity;
+ 	int ret = 0;
++	loff_t address = nanddev_pos_to_offs(nand, &req->pos);
+ 
+-	if (req->mode == MTD_OPS_RAW)
++	if (req->mode == MTD_OPS_RAW) {
++	printk("%s:%d RAW MODE\n", __func__, __LINE__);
+ 		return 0;
++		}
+ 
++	printk("%s:%d data len: %d, data offset: %d, oob len: %d, oob offset: %d, address: 0x%llx\n", __func__, __LINE__, req->datalen, req->dataoffs, req->ooblen, req->ooboffs, address);
+ 	nand_ecc_tweak_req(&ctx->req_ctx, req);
+ 
+-	if (req->type == NAND_PAGE_READ)
++	if (req->type == NAND_PAGE_READ) {
++//	printk("%s:%d READ MODE\n", __func__, __LINE__);
+ 		return 0;
++		}
+ 
+-	free = req->oobbuf.in;
++//	printk("%s:%d before ecnode:\n", __func__, __LINE__);
++//		dump_data(req->databuf.in, nanddev_page_size(nand));
++//		dump_data(req->oobbuf.in, nanddev_per_page_oobsize(nand));
++	free = req->oobbuf.in + 64;
+ 	data = req->databuf.in;
+-	parity = req->oobbuf.in + ctx->steps * RTL_ECC_FREE_SIZE;
++	parity = req->oobbuf.in + ctx->steps * RTL_ECC_FREE_SIZE + 64;
+ 
+ 	for (int i = 0; i < ctx->steps; i++) {
+ 		ret |= rtl_ecc_run_engine(ctx, data, free, parity, RTL_ECC_OP_ENCODE);
+@@ -247,10 +271,16 @@ static int rtl_ecc_prepare_io_req(struct nand_device *nand, struct nand_page_io_
+ 		data += RTL_ECC_BLOCK_SIZE;
+ 		parity += ctx->parity_size;
+ 	}
++	printk("%s:%d done %d encodes\n", __func__, __LINE__, ctx->steps);
+ 
+-	if (unlikely(ret))
++	if (unlikely(ret)) {
+ 		dev_dbg(rtlc->dev, "ECC calculation failed\n");
+ 
++		dump_data(req->databuf.in, nanddev_page_size(nand));
++		dump_data(req->oobbuf.in, nanddev_per_page_oobsize(nand));
++	}
++
++	// TODO test if finish ever done
+ 	return ret ? -EBADMSG : 0;
+ }
+ 
+@@ -262,18 +292,22 @@ static int rtl_ecc_finish_io_req(struct nand_device *nand, struct nand_page_io_r
+ 	char *data, *free, *parity;
+ 	bool failure = false;
+ 	int bitflips = 0;
++	printk("%s:%d\n", __func__, __LINE__);
+ 
+-	if (req->mode == MTD_OPS_RAW)
++	if (req->mode == MTD_OPS_RAW) {
++	printk("%s:%d RAW MODE\n", __func__, __LINE__);
+ 		return 0;
++		}
+ 
+ 	if (req->type == NAND_PAGE_WRITE) {
++//	printk("%s:%d WRITE MODE\n", __func__, __LINE__);
+ 		nand_ecc_restore_req(&ctx->req_ctx, req);
+ 		return 0;
+ 	}
+ 
+-	free = req->oobbuf.in;
++	free = req->oobbuf.in + 64;
+ 	data = req->databuf.in;
+-	parity = req->oobbuf.in + ctx->steps * RTL_ECC_FREE_SIZE;
++	parity = req->oobbuf.in + ctx->steps * RTL_ECC_FREE_SIZE + 64;
+ 
+ 	for (int i = 0 ; i < ctx->steps; i++) {
+ 		int ret = rtl_ecc_run_engine(ctx, data, free, parity, RTL_ECC_OP_DECODE);
+@@ -286,6 +320,7 @@ static int rtl_ecc_finish_io_req(struct nand_device *nand, struct nand_page_io_r
+ 							  ctx->strength);
+ 		if (unlikely(ret < 0)) {
+ 			failure = true;
++			printk("%s:%d failed %d\n", __func__, __LINE__, i);
+ 			mtd->ecc_stats.failed++;
+ 		} else {
+ 			mtd->ecc_stats.corrected += ret;
+@@ -296,14 +331,19 @@ static int rtl_ecc_finish_io_req(struct nand_device *nand, struct nand_page_io_r
+ 		data += RTL_ECC_BLOCK_SIZE;
+ 		parity += ctx->parity_size;
+ 	}
++	printk("%s:%d done %d decodes\n", __func__, __LINE__, ctx->steps);
+ 
+-	nand_ecc_restore_req(&ctx->req_ctx, req);
+-
+-	if (unlikely(failure))
++	if (unlikely(failure)) {
+ 		dev_dbg(rtlc->dev, "ECC correction failed\n");
+-	else if (unlikely(bitflips > 2))
++
++	printk("%s:%d decoded:\n", __func__, __LINE__);
++		dump_data(req->databuf.in, nanddev_page_size(nand));
++		dump_data(req->oobbuf.in, nanddev_per_page_oobsize(nand));
++	} else if (unlikely(bitflips > 2))
+ 		dev_dbg(rtlc->dev, "%d bitflips detected\n", bitflips);
+ 
++	nand_ecc_restore_req(&ctx->req_ctx, req);
++
+ 	return failure ? -EBADMSG : bitflips;
+ }
+ 
+@@ -340,6 +380,7 @@ static int rtl_ecc_init_ctx(struct nand_device *nand)
+ 	struct device *dev = nand->ecc.engine->dev;
+ 	struct rtl_ecc_ctx *ctx;
+ 	int ret;
++	printk("%s:%d\n", __func__, __LINE__);
+ 
+ 	ret = rtl_ecc_check_support(nand);
+ 	if (ret)
+@@ -378,6 +419,8 @@ static void rtl_ecc_cleanup_ctx(struct nand_device *nand)
+ {
+ 	struct rtl_ecc_ctx *ctx = nand_to_ctx(nand);
+ 
++	printk("%s:%d\n", __func__, __LINE__);
++
+ 	if (ctx)
+ 		nand_ecc_cleanup_req_tweaking(&ctx->req_ctx);
+ }
+diff --git a/drivers/spi/spi-realtek-rtl-snand.c b/drivers/spi/spi-realtek-rtl-snand.c
+index 741cf2af3e91..27fdc3ee4537 100644
+--- a/drivers/spi/spi-realtek-rtl-snand.c
++++ b/drivers/spi/spi-realtek-rtl-snand.c
+@@ -1,5 +1,7 @@
+ // SPDX-License-Identifier: GPL-2.0-only
+ 
++#define DEBUG
++
+ #include <linux/completion.h>
+ #include <linux/dma-mapping.h>
+ #include <linux/interrupt.h>
+@@ -323,17 +325,37 @@ static bool rtl_snand_dma_op(const struct spi_mem_op *op)
+ 	}
+ }
+ 
++void dump_data(u8*data, int len);
++void dump_data(u8*data, int len) {
++	int i;
++	if (console_loglevel > minimum_console_loglevel){
++	for (i = 0; i < len; ) {
++		if ((i%16) == 0) printk("0x%04x:", i);
++		printk(KERN_CONT " %02x", data[i]);
++		i++;
++		if ((i%16) == 0) printk(KERN_CONT "\n");
++	}
++	printk("\n");
++	}
++}
++
+ static int rtl_snand_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
+ {
+ 	struct rtl_snand *snand = spi_controller_get_devdata(mem->spi->controller);
+ 	int cs = spi_get_chipselect(mem->spi, 0);
+ 
+-	dev_dbg(snand->dev, "cs %d op cmd %02x %d:%d, dummy %d:%d, addr %08llx@%d:%d, data %d:%d\n",
+-		cs, op->cmd.opcode,
++	dev_dbg(snand->dev, "cs %d %s op cmd %02x %d:%d, dummy %d:%d, addr %08llx@%d:%d, data %d:%d\n",
++		cs, op->data.dir == SPI_MEM_DATA_IN ? "read" : "write", op->cmd.opcode,
+ 		op->cmd.buswidth, op->cmd.nbytes, op->dummy.buswidth,
+ 		op->dummy.nbytes, op->addr.val, op->addr.buswidth,
+ 		op->addr.nbytes, op->data.buswidth, op->data.nbytes);
+ 
++//	WARN_ONCE(op->cmd.opcode == 0x84, "0x84 opcode!\n");
++//	if (op->addr.val == 0x0000bfae) {
++	if (op->cmd.opcode == 0x84) {
++		dump_data(op->data.buf.in, op->data.nbytes);
++	}
++
+ 	if (rtl_snand_dma_op(op))
+ 		return rtl_snand_dma_xfer(snand, cs, op);
+ 	else
