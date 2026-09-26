@@ -53,7 +53,7 @@
 	};
 
 	chosen {
-		bootargs = "earlycon";
+		bootargs = "earlycon root=254:0 replace=root=31:8|ubi.block=0,ubi_r0 replace=root=31:10|ubi.block=0,ubi_r1";
 		stdout-path = "serial0:115200n8";
 	};
 

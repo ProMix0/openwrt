@@ -90,8 +90,8 @@
 				reg = <0x100000 0x20000>;
 			};
 
-			// TODO handle correst rootfs mounting (see CONFIG_MTD_ROOTFS_ROOT_DEV)
 			partition@120000 {
+				compatible = "linux,ubi";
 				label = "ubi";
 				reg = <0x120000 0x7940000>;
 			};

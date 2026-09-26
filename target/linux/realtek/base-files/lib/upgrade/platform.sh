@@ -19,13 +19,6 @@ tplink_sg2xxx_fix_mtdparts() {
 	echo -e "$args" | fw_setenv --script -
 }
 
-rtl9607c_set_bootcmd() {
-	# k1 volume
-	fw_setenv sw_commit "$1"
-	# Use only sw_commit
-	fw_setenv sw_tryactive 2
-}
-
 platform_check_image() {
 	return 0
 }
@@ -63,14 +56,7 @@ platform_do_upgrade() {
 		default_do_upgrade "$1"
 		;;
 	eltex,rg-5520)
-		# Set boot to OEM image (in case of fail)
-		rtl9607c_set_boot_vol 0
-		# Free 30M of space
-		ubirmvol /dev/ubi0 -N ubi_r1 || true
-		CI_KERNPART="ubi_k1"
-		nand_do_flash_file "$1" || nand_do_upgrade_failed
-		rtl9607c_set_boot_vol 1
-		nand_do_upgrade_success
+		platform_do_upgrade_dualboot_rtl9607c "$1"
 		;;
 	*)
 		default_do_upgrade "$1"
