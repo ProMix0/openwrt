@@ -22,7 +22,6 @@
 #define   RTMDIO_960X_CFG_PREAMBLE_SET0_EN	BIT(4)
 #define   RTMDIO_960X_CFG_PREAMBLE_SET1_EN	BIT(5)
 #define RTMDIO_960X_CFG_POLL_CTRL_0		(0x2302C)
-// TODO try different values with logic analyzer
 #define   RTMDIO_960X_SMI_FMT_SET0		GENMASK(1, 0)
 #define   RTMDIO_960X_SMI_FMT_SET1		GENMASK(3, 2)
 #define   RTMDIO_960X_SMI_FMT_C22		0
@@ -52,9 +51,6 @@
 #define RTMDIO_960X_IO_MODE_EN			(0x23014)
 #define   RTMDIO_960X_IO_MDIO_SET0_EN		BIT(10)
 #define   RTMDIO_960X_IO_MDIO_SET1_EN		BIT(11)
-// Master bits doesn't do anything?
-//#define   RTMDIO_960X_IO_MDIO_SET0_MASTER	BIT(8)
-//#define   RTMDIO_960X_IO_MDIO_SET1_MASTER	BIT(9)
 
 #define rtmdio_ctrl_from_bus(bus) \
 	(((struct rtmdio_chan *)(bus)->priv)->ctrl)
@@ -232,35 +228,41 @@ static int rtmdio_write_c45(struct mii_bus *bus, int phy, int devnum, int regnum
 	return err;
 }
 
-static void rtmdio_960x_init(struct mii_bus *bus)
+static int rtmdio_960x_init(struct mii_bus *bus)
 {
 	struct rtmdio_ctrl *ctrl = rtmdio_ctrl_from_bus(bus);
-	struct rtmdio_chan *priv = (struct rtmdio_chan *)(bus)->priv;
+	struct rtmdio_chan *priv = bus->priv;
+	int ret;
 
 	switch (priv->bus_id) {
 	case 0:
-		// TODO reset on unload
-		regmap_set_bits(ctrl->map, RTMDIO_960X_IO_MODE_EN, RTMDIO_960X_IO_MDIO_SET0_EN);
-		regmap_update_bits(ctrl->map, RTMDIO_960X_CFG_POLL_MDX_CTRL, RTMDIO_960X_CFG_MDC_SET0_EN | RTMDIO_960X_CFG_PREAMBLE_SET0_EN, RTMDIO_960X_CFG_MDC_SET0_EN);
+		// TODO reset on unload. And on registering error!
+		ret = regmap_update_bits(ctrl->map, RTMDIO_960X_CFG_POLL_MDX_CTRL, RTMDIO_960X_CFG_MDC_SET0_EN | RTMDIO_960X_CFG_PREAMBLE_SET0_EN, RTMDIO_960X_CFG_MDC_SET0_EN);
 		break;
 	case 1:
-		regmap_set_bits(ctrl->map, RTMDIO_960X_IO_MODE_EN, RTMDIO_960X_IO_MDIO_SET1_EN);
-		regmap_update_bits(ctrl->map, RTMDIO_960X_CFG_POLL_MDX_CTRL, RTMDIO_960X_CFG_MDC_SET1_EN | RTMDIO_960X_CFG_PREAMBLE_SET1_EN, RTMDIO_960X_CFG_MDC_SET1_EN);
+		// Set 1 not tested?
+		// TODO figure out again what's the deal with sets
+		ret = regmap_update_bits(ctrl->map, RTMDIO_960X_CFG_POLL_MDX_CTRL, RTMDIO_960X_CFG_MDC_SET1_EN | RTMDIO_960X_CFG_PREAMBLE_SET1_EN, RTMDIO_960X_CFG_MDC_SET1_EN);
 		break;
+	default:
+		ret = -EINVAL;
 	}
+
+	if (ret)
+		return ret;
 
 	/*
 	 * Use PHY from RTMDIO_960X_CFG_POLL_MDX_ADDR to write to
 	 */
-	regmap_write(ctrl->map, RTMDIO_960X_SMI_INDRT_ACCESS_CTRL_2, BIT(0));
+	return regmap_write(ctrl->map, RTMDIO_960X_SMI_INDRT_ACCESS_CTRL_2, BIT(0));
 }
 
 static int rtmdio_probe_bus(struct device *dev, struct rtmdio_ctrl *ctrl, struct fwnode_handle *fw_bus)
 {
 	struct rtmdio_chan *chan;
 	struct mii_bus *bus;
-	int ret;
 	unsigned int bus_id;
+	int ret;
 
 	ret = fwnode_property_read_u32(fw_bus, "reg", &bus_id);
 	if (ret)
@@ -277,6 +279,7 @@ static int rtmdio_probe_bus(struct device *dev, struct rtmdio_ctrl *ctrl, struct
 	chan->bus_id = bus_id;
 
 	bus->name = "Realtek MDIO bus";
+	bus->parent = dev;
 	bus->read = rtmdio_read;
 	bus->write = rtmdio_write;
 	bus->read_c45 = rtmdio_read_c45;
@@ -332,7 +335,7 @@ static const struct rtmdio_config rtmdio_960x_ext_cfg = {
 
 static const struct of_device_id rtmdio_ids[] = {
 	{
-		.compatible = "realtek,rtl9607-ext-mdio",
+		.compatible = "realtek,rtl9607c-ext-mdio",
 		.data = &rtmdio_960x_ext_cfg,
 	},
 	{ /* sentinel */ }
@@ -350,4 +353,4 @@ static struct platform_driver rtmdio_driver = {
 module_platform_driver(rtmdio_driver);
 
 MODULE_DESCRIPTION("RTL9607C EXT-MDIO driver");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");

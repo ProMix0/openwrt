@@ -1,0 +1,33 @@
+diff --git a/drivers/net/phy/mdio_bus_provider.c b/drivers/net/phy/mdio_bus_provider.c
+index a2391d4b7e5c..6d4559a06d2b 100644
+--- a/drivers/net/phy/mdio_bus_provider.c
++++ b/drivers/net/phy/mdio_bus_provider.c
+@@ -24,6 +24,7 @@
+ #include <linux/of_device.h>
+ #include <linux/of_mdio.h>
+ #include <linux/phy.h>
++#include <linux/pinctrl/consumer.h>
+ #include <linux/slab.h>
+ #include <linux/string.h>
+ #include <linux/uaccess.h>
+@@ -284,6 +285,7 @@ int __mdiobus_register(struct mii_bus *bus, struct module *owner)
+ {
+ 	struct mdio_device *mdiodev;
+ 	struct gpio_desc *gpiod;
++	struct pinctrl *pinctrl;
+ 	bool prevent_c45_scan;
+ 	int i, err;
+ 
+@@ -337,6 +339,12 @@ int __mdiobus_register(struct mii_bus *bus, struct module *owner)
+ 	mutex_init(&bus->mdio_lock);
+ 	mutex_init(&bus->shared_lock);
+ 
++	pinctrl = devm_pinctrl_get_select_default(&bus->dev);
++	if (IS_ERR(pinctrl) && pinctrl != ERR_PTR(-ENODEV)) {
++		device_del(&bus->dev);
++		return dev_err_probe(&bus->dev, PTR_ERR(pinctrl), "unable to get pinctrl\n");
++	}
++
+ 	/* assert bus level PHY GPIO reset */
+ 	gpiod = devm_gpiod_get_optional(&bus->dev, "reset", GPIOD_OUT_HIGH);
+ 	if (IS_ERR(gpiod)) {
