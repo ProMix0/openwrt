@@ -225,17 +225,13 @@
 		SWITCH_PORT(2, 2, internal)
 		SWITCH_PORT(3, 1, internal)
 
-#if 0 // MDIO test
-		// Port6 - HSGMII, WAN
-		// TODO - serdes. Maybe after PCS handle
-		//SWITCH_PORT(6, 7, hsgmii)
+// Port 6 - SGMII_MAC, WAN
 		port_wan: port@6 {
 			reg = <6>;
 			label = "wan";
 			phy-handle = <&phy6>;
-			phy-mode = "hsgmii" ;
+			phy-mode = "sgmii";
 		};
-#endif
 	};
 };
 
