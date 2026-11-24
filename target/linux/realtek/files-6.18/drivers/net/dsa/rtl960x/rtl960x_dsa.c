@@ -39,7 +39,8 @@
 
 /*
  * SerDes (SDS) programming for port 6 ("HSG0"), ported 1:1 from the vendor
- * SDK's _rtl9607c_lan_sds0_modeV3_set() (chip rev C, SGMII_Patch_20211214).
+ * SDK's _rtl9607c_lan_sds0_modeV3_set() (chip rev C, SGMII_Patch_20211214 /
+ * 2500Base-X_Patch_20211214).
  * Register offsets are in the switch0 register space, identical to the SDK's
  * rtk_rtl9607c_reg_list.c (offset, 4-byte per-index stride for arrayed regs).
  *
@@ -60,17 +61,23 @@
 #define RTL960X_LINE_RATE_2500M_0		0x2d96c
 #define   RTL960X_EN_RATE_2500M			BIT(19)
 #define   RTL960X_RATE_MASK			GENMASK(18, 0)
+#define   RTL960X_RATE_2500M_VAL		0x4ffff /* SDK value, semantics undocumented */
 #define RTL960X_WSDS_HSG0_ANA_00		0x41000
 #define   RTL960X_CFG_MDIO_RSTB			BIT(3)
 #define RTL960X_WSDS_HSG0_DIG_01		0x41034
 #define   RTL960X_CFG_SDS_MDX_REQ		BIT(15)
 #define RTL960X_WSDS_HSG0_DIG_02		0x41038
+#define RTL960X_HSG0_FIB_REG0			0x41c00
+#define   RTL960X_FP_CFG_FIB_PDOWN		BIT(11)
+#define RTL960X_HSG0_FIB_EXT_REG19		0x41e4c
+#define   RTL960X_FEP_CFG_TX_MODE		GENMASK(15, 14)
 
 /* Port 6 is the first (index 1) HSGMII-capable SerDes, "HSG0" */
 #define RTL960X_SDS_HSG0			1
 
 /* CFG_SDS_MODE field codes (RTL960X_CFG_SDS_MODE_MASK) */
 #define RTL960X_SDS_MODE_SGMII			0x2
+#define RTL960X_SDS_MODE_2500BASEX		0x16
 #define RTL960X_SDS_MODE_RESET			0x1f
 
 /* "Enable common IP" physical addresses (SDK 0xB8000600 / 0xB8000508) */
@@ -858,10 +865,18 @@ static void rtl960x_dsa_phylink_get_caps(struct dsa_switch *ds, int port,
 //		__set_bit(PHY_INTERFACE_MODE_1000BASEX,
 //			  config->supported_interfaces);
 		// TODO HSGMII?
-//		__set_bit(PHY_INTERFACE_MODE_2500BASEX,
-//			  config->supported_interfaces);
+		// With this capability set, PHY don't communicate over SGMII!
+		__set_bit(PHY_INTERFACE_MODE_2500BASEX,
+			  config->supported_interfaces);
 
-		// TODO figure out PHYLINK_PCS_NEG_*
+		/*
+		 * Autoneg is out-of-band for both interfaces: the
+		 * phylib-managed RTL8221B never requires in-band status, so
+		 * under MLO_AN_PHY phylink resolves PHYLINK_PCS_NEG_OUTBAND
+		 * and the serial stream carries no link ability to decode.
+		 * No phylink_pcs is registered; the MAC link state comes
+		 * solely from the forced ability written in mac_link_up.
+		 */
 		config->mac_capabilities = MAC_SYM_PAUSE | MAC_ASYM_PAUSE |
 					   MAC_10 | MAC_100 | MAC_1000FD | MAC_2500FD;
 		break;
@@ -917,6 +932,31 @@ static const struct rtl960x_sds_ana rtl960x_sgmii_ana[] = {
 	{ 0xc10b, 0x80a1 },
 };
 
+/*
+ * 2500BASE-X (2.5G) analog SerDes tuning table for the HSG0 SerDes (port 6),
+ * chip rev C. This is the exact ANA + PAGE1 write sequence from the SDK's
+ * _rtl9607c_lan_sds0_modeV3_set() 2500BASEX case (2500Base-X_Patch_20211214).
+ * Ten of the 15 values are the same as the SGMII table above; 0xc001, 0xc005,
+ * 0xc100, 0xc101 and 0xc103 differ.
+ */
+static const struct rtl960x_sds_ana rtl960x_2500basex_ana[] = {
+	{ 0xc001, 0xac4c },
+	{ 0xc003, 0x276d },
+	{ 0xc004, 0x5000 },
+	{ 0xc005, 0x63db },
+	{ 0xc006, 0x001c },
+	{ 0xc009, 0x521c },
+	{ 0xc00a, 0xb628 },
+	{ 0xc00d, 0xe714 },
+	{ 0xc100, 0x50a5 },
+	{ 0xc101, 0x888a },
+	{ 0xc102, 0x0053 },
+	{ 0xc103, 0x8b66 },
+	{ 0xc104, 0x450c },
+	{ 0xc109, 0xf0f2 },
+	{ 0xc10b, 0x80a1 },
+};
+
 /* Analog indirect-access window: write data -> DIG_02, cmd -> DIG_01,
  * then poll DIG_01[15] (CFG_SDS_MDX_REQ) until the SerDes is idle.
  */
@@ -939,15 +979,26 @@ static int rtl960x_sds_indirect_write(struct rtl960x_dsa *priv, u16 cmd, u16 dat
 }
 
 /*
- * Program the HSG0 SerDes (port 6) into SGMII_MAC mode, following the SDK's
- * rev-C (_modeV3_set) link-down / clock-gate protection sequence. For the
+ * Program the HSG0 SerDes (port 6) for the requested phylink interface, SGMII
+ * or 2500BASE-X, following the SDK's rev-C (_modeV3_set) link-down /
+ * clock-gate protection sequence. Both cases share the protection preamble
+ * and the ANA doorbell mechanism and differ only in the CFG_SDS_MODE code,
+ * the CPU_PLL_CTRL_DUMMY speed bits, the analog tuning table, and the
+ * BASE-X-only fiber-PMA / 2500M line-rate tail; the SDK does not touch the
+ * SDS_PHY_MODE field for BASE-X ("the MAC/PHY mode is not used"). For the
  * initial proof-of-concept this writes the "common IP enable" bits via a
  * direct ioremap and drives the whole sequence from mac_config.
  */
-static int rtl960x_sds0_sgmii_setup(struct rtl960x_dsa *priv)
+static int rtl960x_sds0_setup(struct rtl960x_dsa *priv, phy_interface_t iface)
 {
+	bool basex = iface == PHY_INTERFACE_MODE_2500BASEX;
+	const struct rtl960x_sds_ana *ana;
 	u32 abltry, force_mode, val;
-	int i, ret;
+	int i, n, ret;
+
+	ana = basex ? rtl960x_2500basex_ana : rtl960x_sgmii_ana;
+	n = basex ? ARRAY_SIZE(rtl960x_2500basex_ana) :
+		    ARRAY_SIZE(rtl960x_sgmii_ana);
 
 	/* Enable common IP (SDK ioal_socMem32 0xB8000600 + 0xB8000508) */
 	val = readl(priv->ip_common);
@@ -982,7 +1033,10 @@ static int rtl960x_sds0_sgmii_setup(struct rtl960x_dsa *priv)
 			      RTL960X_SDS_CMD_STOP_GLI_CLK);
 	if (ret)
 		goto out_restore;
-	mdelay(100);
+	/* SDK osal_time_mdelay(100); mac_config runs in process context,
+	 * so sleep instead of spinning for 100 ms.
+	 */
+	usleep_range(100000, 120000);
 
 	/* Release MDIO reset + enable the combo SDS */
 	ret = regmap_set_bits(priv->map, RTL960X_WSDS_HSG0_ANA_00,
@@ -995,32 +1049,39 @@ static int rtl960x_sds0_sgmii_setup(struct rtl960x_dsa *priv)
 	if (ret)
 		goto out_restore;
 
-	/* SGMII mode */
+	/* SGMII or 2500BASE-X mode */
 	ret = regmap_update_bits(priv->map, RTL960X_SDS_CFG_REG(RTL960X_SDS_HSG0),
 				 RTL960X_CFG_SDS_MODE_MASK,
-				 RTL960X_SDS_MODE_SGMII);
+				 basex ? RTL960X_SDS_MODE_2500BASEX
+				       : RTL960X_SDS_MODE_SGMII);
 	if (ret)
 		goto out_restore;
 
-	/* CPU_PLL_CTRL_DUMMY: PLL/4 APHY speed for SerDes port 6, SGMII */
+	/* CPU_PLL_CTRL_DUMMY: APHY speed selection for SerDes port 6. SGMII
+	 * runs the PLL/4 path with the USB3 select set (SDK SGMII case);
+	 * 2500BASE-X needs PLL/2 (SPDSEL=1) with SGMII_SEL_USB3=0 (SDK 2500
+	 * case).
+	 */
 	ret = regmap_update_bits(priv->map, RTL960X_CPU_PLL_CTRL_DUMMY,
-				 RTL960X_SPDSEL_SGMII_USB3_MASK, 0);
+				 RTL960X_SPDSEL_SGMII_USB3_MASK,
+				 basex ? FIELD_PREP(RTL960X_SPDSEL_SGMII_USB3_MASK, 1)
+				       : 0);
 	if (ret)
 		goto out_restore;
-	ret = regmap_set_bits(priv->map, RTL960X_CPU_PLL_CTRL_DUMMY,
-			      RTL960X_SGMII_SEL_USB3);
+	ret = regmap_update_bits(priv->map, RTL960X_CPU_PLL_CTRL_DUMMY,
+				 RTL960X_SGMII_SEL_USB3,
+				 basex ? 0 : RTL960X_SGMII_SEL_USB3);
 	if (ret)
 		goto out_restore;
 
 	/* Analog SerDes tuning */
-	for (i = 0; i < ARRAY_SIZE(rtl960x_sgmii_ana); i++) {
-		ret = rtl960x_sds_indirect_write(priv,
-			rtl960x_sgmii_ana[i].cmd, rtl960x_sgmii_ana[i].data);
+	for (i = 0; i < n; i++) {
+		ret = rtl960x_sds_indirect_write(priv, ana[i].cmd, ana[i].data);
 		if (ret)
 			goto out_restore;
 	}
 
-	/* Reset SDS, then re-assert SGMII mode */
+	/* Reset SDS, then re-assert the mode */
 	ret = regmap_update_bits(priv->map, RTL960X_SDS_CFG_REG(RTL960X_SDS_HSG0),
 				 RTL960X_CFG_SDS_MODE_MASK,
 				 RTL960X_SDS_MODE_RESET);
@@ -1028,9 +1089,25 @@ static int rtl960x_sds0_sgmii_setup(struct rtl960x_dsa *priv)
 		goto out_restore;
 	ret = regmap_update_bits(priv->map, RTL960X_SDS_CFG_REG(RTL960X_SDS_HSG0),
 				 RTL960X_CFG_SDS_MODE_MASK,
-				 RTL960X_SDS_MODE_SGMII);
+				 basex ? RTL960X_SDS_MODE_2500BASEX
+				       : RTL960X_SDS_MODE_SGMII);
 	if (ret)
 		goto out_restore;
+
+	/* 2500BASE-X only, after the mode is re-asserted: power up the fiber
+	 * PMA (FP_CFG_FIB_PDOWN=0) and disable the TX silent start
+	 * (FEP_CFG_TX_MODE=0). The SGMII case writes neither register.
+	 */
+	if (basex) {
+		ret = regmap_update_bits(priv->map, RTL960X_HSG0_FIB_REG0,
+					 RTL960X_FP_CFG_FIB_PDOWN, 0);
+		if (ret)
+			goto out_restore;
+		ret = regmap_update_bits(priv->map, RTL960X_HSG0_FIB_EXT_REG19,
+					 RTL960X_FEP_CFG_TX_MODE, 0);
+		if (ret)
+			goto out_restore;
+	}
 
 	/* Restore the SerDes clock */
 	ret = regmap_clear_bits(priv->map,
@@ -1038,7 +1115,10 @@ static int rtl960x_sds0_sgmii_setup(struct rtl960x_dsa *priv)
 				RTL960X_SDS_CMD_STOP_GLI_CLK);
 	if (ret)
 		goto out_restore;
-	mdelay(100);
+	/* SDK osal_time_mdelay(100); sleep in process context instead of
+	 * busy-spinning 100 ms with interrupts enabled.
+	 */
+	usleep_range(100000, 120000);
 
 	/* Switch ready, PHY patch done */
 	ret = regmap_set_bits(priv->map, RTL960X_WRAP_GPHY_MISC,
@@ -1046,18 +1126,32 @@ static int rtl960x_sds0_sgmii_setup(struct rtl960x_dsa *priv)
 	if (ret)
 		goto out_restore;
 
-	/* SGMII is 1G, keep the 2500M line-rate override disabled */
-	ret = regmap_clear_bits(priv->map, RTL960X_LINE_RATE_2500M_0,
-				RTL960X_EN_RATE_2500M);
+	if (basex) {
+		/* 2.5G line rate: enable the override with the SDK rate */
+		ret = regmap_update_bits(priv->map, RTL960X_LINE_RATE_2500M_0,
+					 RTL960X_EN_RATE_2500M | RTL960X_RATE_MASK,
+					 RTL960X_EN_RATE_2500M |
+					 FIELD_PREP(RTL960X_RATE_MASK,
+						    RTL960X_RATE_2500M_VAL));
+	} else {
+		/* SGMII is 1G, keep the 2500M line-rate override disabled */
+		ret = regmap_clear_bits(priv->map, RTL960X_LINE_RATE_2500M_0,
+					RTL960X_EN_RATE_2500M);
+	}
 	if (ret)
 		goto out_restore;
 
-	/* SGMII_MAC: SerDes plays the MAC role (0 == MAC, 1 == PHY) */
-	ret = regmap_clear_bits(priv->map,
-				RTL960X_UTP_FIBER_AUTODET_REG(RTL960X_SDS_HSG0),
-				RTL960X_SDS_PHY_MODE);
-	if (ret)
-		goto out_restore;
+	/* SGMII_MAC: SerDes plays the MAC role (0 == MAC, 1 == PHY). The
+	 * field is not used in 2500BASE-X, so the SDK leaves it alone there
+	 * and so do we.
+	 */
+	if (!basex) {
+		ret = regmap_clear_bits(priv->map,
+					RTL960X_UTP_FIBER_AUTODET_REG(RTL960X_SDS_HSG0),
+					RTL960X_SDS_PHY_MODE);
+		if (ret)
+			goto out_restore;
+	}
 
 out_restore:
 	/* MAC link restore: put back the pre-switch ability and force state */
@@ -1067,6 +1161,15 @@ out:
 	return ret;
 }
 
+/*
+ * Hazard (documented, mitigation deferred): the RTL8221B PHY driver mutates
+ * phydev->interface in rtl822xb_update_interface() to mirror its SerDes side.
+ * A later config_init() replay -- suspend/resume via phy_init_hw, or a PHY
+ * re-attach -- recomputes the PHY's SERDES_OPTION from that mutated value:
+ * after a 2500BASE-X period it locks the PHY into 2500BASEX-only, the dual
+ * auto-adapt mode dies and the WAN stays down until the PHY is re-probed.
+ * Untested on target; settle the mitigation after a pm_suspend cycle there.
+ */
 static void rtl960x_dsa_mac_config(struct phylink_config *config,
 				   unsigned int mode,
 				   const struct phylink_link_state *state)
@@ -1075,19 +1178,46 @@ static void rtl960x_dsa_mac_config(struct phylink_config *config,
 	struct rtl960x_dsa *priv = dp->ds->priv;
 	int ret;
 
-	if (dp->index != 6 || state->interface != PHY_INTERFACE_MODE_SGMII)
+	if (dp->index != 6)
 		return;
 
-	if (priv->sds_port6_done)
+	if (state->interface != PHY_INTERFACE_MODE_SGMII &&
+	    state->interface != PHY_INTERFACE_MODE_2500BASEX){
+	    printk("%s:%d INVALID MAC MODE!\n", __func__ ,__LINE__);
 		return;
+		}
 
-	ret = rtl960x_sds0_sgmii_setup(priv);
+
+	if (
+	    state->interface != PHY_INTERFACE_MODE_2500BASEX){
+	    printk("%s:%d skip SGMII\n", __func__ ,__LINE__);
+		return;
+		}
+
+	/* phylink calls mac_config only when the resolved interface changed
+	 * (plain link flaps never reach it), but reprogram on any difference
+	 * from the interface last programmed so a return to SGMII is not
+	 * skipped; cache it only on success so a failure retries on the next
+	 * event.
+	 */
+	if (priv->port6_ifmode == state->interface){
+	    printk("%s:%d skip reconfiguring - mode is the same\n", __func__ ,__LINE__);
+		return;
+		}
+
+	ret = rtl960x_sds0_setup(priv, state->interface);
 	if (ret)
 		dev_err(priv->dev,
-			"failed to configure port 6 SerDes for SGMII: %pe\n",
-			ERR_PTR(ret));
-	else
-		priv->sds_port6_done = true;
+			"failed to configure port 6 SerDes for %s: %pe\n",
+			state->interface == PHY_INTERFACE_MODE_2500BASEX ?
+				"2500BASE-X" : "SGMII", ERR_PTR(ret));
+	else{
+		priv->port6_ifmode = state->interface;
+		dev_info(priv->dev,
+			"configured port 6 SerDes for %s\n",
+			state->interface == PHY_INTERFACE_MODE_2500BASEX ?
+				"2500BASE-X" : "SGMII");
+		}
 }
 
 static void rtl960x_dsa_mac_link_down(struct phylink_config *config,
@@ -1126,6 +1256,16 @@ static void rtl960x_dsa_mac_link_up(struct phylink_config *config,
 	if (dp->index != 6)
 		return;
 
+	/* mac_config() caches port6_ifmode only on success; against a failed
+	 * or mode-mismatched SerDes program do not advertise link, because
+	 * phylink cannot see a void mac_config failure and would leave the
+	 * carrier up with no data path.
+	 */
+	if (priv->port6_ifmode != interface){
+	printk("%s:%d weird mode mismatch skip!\n", __func__, __LINE__);
+		return;
+		}
+
 	switch (speed) {
 	case SPEED_10:
 		sdk_speed = 0;		/* PORT_SPEED_10M */
@@ -1146,13 +1286,15 @@ static void rtl960x_dsa_mac_link_up(struct phylink_config *config,
 	abltry = FIELD_PREP(RTL960X_FORCE_P_ABLTY_SPEED_MASK, sdk_speed & 0x3) |
 		 FIELD_PREP(RTL960X_FORCE_P_ABLTY_SPEED23_MASK, sdk_speed >> 2) |
 		 RTL960X_FORCE_P_ABLTY_LINK;
-// Hardcoded in SDK
-//	if (duplex == DUPLEX_FULL)
-		abltry |= RTL960X_FORCE_P_ABLTY_DUPLEX;
-//	if (tx_pause)
-//		abltry |= RTL960X_FORCE_P_ABLTY_TX_PAUSE;
-//	if (rx_pause)
-//		abltry |= RTL960X_FORCE_P_ABLTY_RX_PAUSE;
+	/* The SDK hardcodes full-duplex here (2500BASE-X and SGMII run the
+	 * serial side full-duplex); the pause cells follow the phylink
+	 * resolved state.
+	 */
+	abltry |= RTL960X_FORCE_P_ABLTY_DUPLEX;
+	if (tx_pause)
+		abltry |= RTL960X_FORCE_P_ABLTY_TX_PAUSE;
+	if (rx_pause)
+		abltry |= RTL960X_FORCE_P_ABLTY_RX_PAUSE;
 
 	ret = regmap_write(priv->map, RTL960X_FORCE_P_ABLTY_REG(6), abltry);
 	if (ret)
@@ -1223,6 +1365,8 @@ static int rtl960x_dsa_probe(struct platform_device *pdev)
 
 	priv->dev = dev;
 	priv->ds = ds;
+	/* The port 6 SerDes has not been programmed yet */
+	priv->port6_ifmode = PHY_INTERFACE_MODE_NA;
 
 	ret = devm_mutex_init(dev, &priv->l2_lock);
 	if (ret)

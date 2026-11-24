@@ -209,7 +209,7 @@
 		reg = <6>;
 		// Needed to... identification while in reset?..
 		// TODO why it's neede?
-		// TODO C45?
+		// TODO C45? - doesn't probes for some reason
 		compatible = "ethernet-phy-id001c.c849", "ethernet-phy-ieee802.3-c22";
 
 		reset-gpios = <&gpio1 28 GPIO_ACTIVE_LOW>;

@@ -11,7 +11,8 @@
  *   0..3  internal GPHY ports
  *   4     reserved / unused
  *   5     SGMII or PON                          (WAN-capable)
- *   6     HSGMII, muxed with USB 3.0            (WAN-capable)
+ *   6     HSG0 SerDes SGMII/2500BASE-X,         (WAN-capable)
+ *         muxed with USB 3.0
  *   7     2nd HSGMII, muxed with PCIE1 or GMAC2
  *   8     reserved / unused
  *   9,10  CPU ports (GMAC0 / GMAC1)
@@ -48,8 +49,11 @@ struct rtl960x_dsa {
 	 */
 	void __iomem *ip_common;
 	void __iomem *ip_en;
-	/* port 6 SerDes has already been programmed into SGMII_MAC mode */
-	bool sds_port6_done;
+	/*
+	 * Interface the port 6 SerDes was last programmed successfully for,
+	 * PHY_INTERFACE_MODE_NA until mac_config() has run a sequence.
+	 */
+	phy_interface_t port6_ifmode;
 	/*
 	 * l2_lock keeps a whole FDB dump walk atomic against the FDB add/del
 	 * work items, which run from DSA's deferred workqueue, and serialises
