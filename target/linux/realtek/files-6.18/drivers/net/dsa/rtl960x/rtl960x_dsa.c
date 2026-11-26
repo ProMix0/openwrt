@@ -7,8 +7,10 @@
  */
 
 #include <linux/bitfield.h>
+#include <linux/delay.h>
 #include <linux/if_bridge.h>
 #include <linux/if_vlan.h>
+#include <linux/io.h>
 #include <linux/mfd/syscon.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -26,11 +28,57 @@
 /* Forced MAC ability of a port, used to force the CPU ports' link up */
 #define RTL960X_FORCE_P_ABLTY_REG(_port)	(0x1cc + (_port) * 4)
 #define   RTL960X_FORCE_P_ABLTY_NWAY		BIT(7)
+#define   RTL960X_FORCE_P_ABLTY_TX_PAUSE	BIT(6)
+#define   RTL960X_FORCE_P_ABLTY_RX_PAUSE	BIT(5)
 #define   RTL960X_FORCE_P_ABLTY_LINK		BIT(4)
 #define   RTL960X_FORCE_P_ABLTY_DUPLEX		BIT(2)
 #define   RTL960X_FORCE_P_ABLTY_SPEED_MASK	GENMASK(1, 0)
+#define   RTL960X_FORCE_P_ABLTY_SPEED23_MASK	GENMASK(13, 12)
 #define   RTL960X_FORCE_P_ABLTY_SPEED_1000	2
 #define RTL960X_ABLTY_FORCE_MODE_REG(_port)	(0x238 + (_port) * 4)
+#define   RTL960X_ABLTY_FORCE_MODE_ENABLE	0xbfff
+
+/*
+ * SerDes (SDS) programming for port 6 ("HSG0"), ported 1:1 from the vendor
+ * SDK's _rtl9607c_lan_sds0_modeV3_set() (chip rev C, SGMII_Patch_20211214).
+ * Register offsets are in the switch0 register space, identical to the SDK's
+ * rtk_rtl9607c_reg_list.c (offset, 4-byte per-index stride for arrayed regs).
+ *
+ * The "common IP enable" registers live in the soc peripheral space instead
+ * (SDK 0xB8000600 / 0xB8000508) and are handled via ioremap in probe().
+ */
+#define RTL960X_WRAP_GPHY_MISC			0x114
+#define   RTL960X_PATCH_PHY_DONE		BIT(0)
+#define RTL960X_CPU_PLL_CTRL_DUMMY		0x354
+#define   RTL960X_SPDSEL_SGMII_USB3_MASK	GENMASK(31, 30)
+#define   RTL960X_SGMII_SEL_USB3		BIT(29)
+#define RTL960X_SDS_CFG_REG(_sds)		(0x270 + (_sds) * 4)
+#define   RTL960X_CFG_COMBO_SDS_EN		BIT(5)
+#define   RTL960X_CFG_SDS_MODE_MASK		GENMASK(4, 0)
+#define RTL960X_UTP_FIBER_AUTODET_REG(_sds)	(0x2c0 + (_sds) * 4)
+#define   RTL960X_SDS_PHY_MODE			BIT(10)
+#define   RTL960X_SDS_CMD_STOP_GLI_CLK		BIT(8)
+#define RTL960X_LINE_RATE_2500M_0		0x2d96c
+#define   RTL960X_EN_RATE_2500M			BIT(19)
+#define   RTL960X_RATE_MASK			GENMASK(18, 0)
+#define RTL960X_WSDS_HSG0_ANA_00		0x41000
+#define   RTL960X_CFG_MDIO_RSTB			BIT(3)
+#define RTL960X_WSDS_HSG0_DIG_01		0x41034
+#define   RTL960X_CFG_SDS_MDX_REQ		BIT(15)
+#define RTL960X_WSDS_HSG0_DIG_02		0x41038
+
+/* Port 6 is the first (index 1) HSGMII-capable SerDes, "HSG0" */
+#define RTL960X_SDS_HSG0			1
+
+/* CFG_SDS_MODE field codes (RTL960X_CFG_SDS_MODE_MASK) */
+#define RTL960X_SDS_MODE_SGMII			0x2
+#define RTL960X_SDS_MODE_RESET			0x1f
+
+/* "Enable common IP" physical addresses (SDK 0xB8000600 / 0xB8000508) */
+#define RTL960X_IP_COMMON_ADDR		0x18000600
+#define   RTL960X_IP_COMMON_BIT		BIT(29)
+#define RTL960X_IP_EN_ADDR		0x18000508
+#define   RTL960X_IP_EN_BITS		(BIT(27) | BIT(28))
 
 /*
  * Preferred CPU port for the user ports when the device tree describes more
@@ -898,6 +946,15 @@ static void rtl960x_dsa_phylink_get_caps(struct dsa_switch *ds, int port,
 		config->mac_capabilities = MAC_1000FD;
 		break;
 
+	case 6:
+		__set_bit(PHY_INTERFACE_MODE_SGMII,
+			  config->supported_interfaces);
+
+		// TODO figure out PHYLINK_PCS_NEG_*
+		config->mac_capabilities = MAC_SYM_PAUSE | MAC_ASYM_PAUSE |
+					   MAC_10 | MAC_100 | MAC_1000FD | MAC_2500FD;
+		break;
+
 	/*
 	 * Port 5 (PON SerDes) and ports 6 and 7 (HSGMII SerDes) need SerDes
 	 * configuration this driver does not implement; port 7 as the GMAC2
@@ -943,16 +1000,219 @@ static int rtl960x_port_max_mtu(struct dsa_switch *ds, int port)
 	return RTL960X_MAX_PACKET_LENGTH - RTL960X_FRAME_OVERHEAD;
 }
 
+/*
+ * SGMII (1G) analog SerDes tuning table for the HSG0 SerDes (port 6), chip
+ * rev C. This is the exact ANA + PAGE1 write sequence from the SDK's
+ * _rtl9607c_lan_sds0_modeV3_set() SGMII case (SGMII_Patch_20211214).
+ */
+struct rtl960x_sds_ana {
+	u16 cmd;
+	u16 data;
+};
+
+static const struct rtl960x_sds_ana rtl960x_sgmii_ana[] = {
+	{ 0xc001, 0xac68 },
+	{ 0xc003, 0x276d },
+	{ 0xc004, 0x5000 },
+	{ 0xc005, 0x6313 },
+	{ 0xc006, 0x001c },
+	{ 0xc009, 0x521c },
+	{ 0xc00a, 0xb628 },
+	{ 0xc00d, 0xe714 },
+	{ 0xc100, 0x50a2 },
+	{ 0xc101, 0x886a },
+	{ 0xc102, 0x0053 },
+	{ 0xc103, 0x2b66 },
+	{ 0xc104, 0x450c },
+	{ 0xc109, 0xf0f2 },
+	{ 0xc10b, 0x80a1 },
+};
+
+/* Analog indirect-access window: write data -> DIG_02, cmd -> DIG_01,
+ * then poll DIG_01[15] (CFG_SDS_MDX_REQ) until the SerDes is idle.
+ */
+static int rtl960x_sds_indirect_write(struct rtl960x_dsa *priv, u16 cmd, u16 data)
+{
+	u32 val;
+	int ret;
+
+	ret = regmap_write(priv->map, RTL960X_WSDS_HSG0_DIG_02, data);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(priv->map, RTL960X_WSDS_HSG0_DIG_01, cmd);
+	if (ret)
+		return ret;
+
+	return regmap_read_poll_timeout(priv->map, RTL960X_WSDS_HSG0_DIG_01,
+					val, !(val & RTL960X_CFG_SDS_MDX_REQ),
+					10, 10000);
+}
+
+/*
+ * Program the HSG0 SerDes (port 6) into SGMII_MAC mode, following the SDK's
+ * rev-C (_modeV3_set) link-down / clock-gate protection sequence. For the
+ * initial proof-of-concept this writes the "common IP enable" bits via a
+ * direct ioremap and drives the whole sequence from mac_config.
+ */
+static int rtl960x_sds0_sgmii_setup(struct rtl960x_dsa *priv)
+{
+	u32 abltry, force_mode, val;
+	int i, ret;
+
+	/* Enable common IP (SDK ioal_socMem32 0xB8000600 + 0xB8000508) */
+	val = readl(priv->ip_common);
+	writel(val | RTL960X_IP_COMMON_BIT, priv->ip_common);
+
+	val = readl(priv->ip_en);
+	writel(val | RTL960X_IP_EN_BITS, priv->ip_en);
+
+	/* Force port 6 MAC link down, saving the previous ability/state for
+	 * the restore at the end (SDK macForceAbility_get/set + state set).
+	 */
+	ret = regmap_read(priv->map, RTL960X_FORCE_P_ABLTY_REG(6), &abltry);
+	if (ret)
+		return ret;
+	ret = regmap_read(priv->map, RTL960X_ABLTY_FORCE_MODE_REG(6),
+			  &force_mode);
+	if (ret)
+		return ret;
+
+	ret = regmap_clear_bits(priv->map, RTL960X_FORCE_P_ABLTY_REG(6),
+				RTL960X_FORCE_P_ABLTY_LINK);
+	if (ret)
+		goto out;
+	/* 0xbfff == ENABLED in dal_rtl9607c_port_macForceAbilityState_set */
+	ret = regmap_write(priv->map, RTL960X_ABLTY_FORCE_MODE_REG(6), 0xbfff);
+	if (ret)
+		goto out_restore;
+
+	/* Stop the SerDes clock before reprogramming */
+	ret = regmap_set_bits(priv->map,
+			      RTL960X_UTP_FIBER_AUTODET_REG(RTL960X_SDS_HSG0),
+			      RTL960X_SDS_CMD_STOP_GLI_CLK);
+	if (ret)
+		goto out_restore;
+	mdelay(100);
+
+	/* Release MDIO reset + enable the combo SDS */
+	ret = regmap_set_bits(priv->map, RTL960X_WSDS_HSG0_ANA_00,
+			      RTL960X_CFG_MDIO_RSTB);
+	if (ret)
+		goto out_restore;
+
+	ret = regmap_set_bits(priv->map, RTL960X_SDS_CFG_REG(RTL960X_SDS_HSG0),
+			      RTL960X_CFG_COMBO_SDS_EN);
+	if (ret)
+		goto out_restore;
+
+	/* SGMII mode */
+	ret = regmap_update_bits(priv->map, RTL960X_SDS_CFG_REG(RTL960X_SDS_HSG0),
+				 RTL960X_CFG_SDS_MODE_MASK,
+				 RTL960X_SDS_MODE_SGMII);
+	if (ret)
+		goto out_restore;
+
+	/* CPU_PLL_CTRL_DUMMY: PLL/4 APHY speed for SerDes port 6, SGMII */
+	ret = regmap_update_bits(priv->map, RTL960X_CPU_PLL_CTRL_DUMMY,
+				 RTL960X_SPDSEL_SGMII_USB3_MASK, 0);
+	if (ret)
+		goto out_restore;
+	ret = regmap_set_bits(priv->map, RTL960X_CPU_PLL_CTRL_DUMMY,
+			      RTL960X_SGMII_SEL_USB3);
+	if (ret)
+		goto out_restore;
+
+	/* Analog SerDes tuning */
+	for (i = 0; i < ARRAY_SIZE(rtl960x_sgmii_ana); i++) {
+		ret = rtl960x_sds_indirect_write(priv,
+			rtl960x_sgmii_ana[i].cmd, rtl960x_sgmii_ana[i].data);
+		if (ret)
+			goto out_restore;
+	}
+
+	/* Reset SDS, then re-assert SGMII mode */
+	ret = regmap_update_bits(priv->map, RTL960X_SDS_CFG_REG(RTL960X_SDS_HSG0),
+				 RTL960X_CFG_SDS_MODE_MASK,
+				 RTL960X_SDS_MODE_RESET);
+	if (ret)
+		goto out_restore;
+	ret = regmap_update_bits(priv->map, RTL960X_SDS_CFG_REG(RTL960X_SDS_HSG0),
+				 RTL960X_CFG_SDS_MODE_MASK,
+				 RTL960X_SDS_MODE_SGMII);
+	if (ret)
+		goto out_restore;
+
+	/* Restore the SerDes clock */
+	ret = regmap_clear_bits(priv->map,
+				RTL960X_UTP_FIBER_AUTODET_REG(RTL960X_SDS_HSG0),
+				RTL960X_SDS_CMD_STOP_GLI_CLK);
+	if (ret)
+		goto out_restore;
+	mdelay(100);
+
+	/* Switch ready, PHY patch done */
+	ret = regmap_set_bits(priv->map, RTL960X_WRAP_GPHY_MISC,
+			      RTL960X_PATCH_PHY_DONE);
+	if (ret)
+		goto out_restore;
+
+	/* SGMII is 1G, keep the 2500M line-rate override disabled */
+	ret = regmap_clear_bits(priv->map, RTL960X_LINE_RATE_2500M_0,
+				RTL960X_EN_RATE_2500M);
+	if (ret)
+		goto out_restore;
+
+	/* SGMII_MAC: SerDes plays the MAC role (0 == MAC, 1 == PHY) */
+	ret = regmap_clear_bits(priv->map,
+				RTL960X_UTP_FIBER_AUTODET_REG(RTL960X_SDS_HSG0),
+				RTL960X_SDS_PHY_MODE);
+	if (ret)
+		goto out_restore;
+
+out_restore:
+	/* MAC link restore: put back the pre-switch ability and force state */
+	regmap_write(priv->map, RTL960X_FORCE_P_ABLTY_REG(6), abltry);
+	regmap_write(priv->map, RTL960X_ABLTY_FORCE_MODE_REG(6), force_mode);
+out:
+	return ret;
+}
+
 static void rtl960x_dsa_mac_config(struct phylink_config *config,
 				   unsigned int mode,
 				   const struct phylink_link_state *state)
 {
+	struct dsa_port *dp = dsa_phylink_to_port(config);
+	struct rtl960x_dsa *priv = dp->ds->priv;
+	int ret;
+
+	if (dp->index != 6 || state->interface != PHY_INTERFACE_MODE_SGMII)
+		return;
+
+	if (priv->sds_port6_done)
+		return;
+
+	ret = rtl960x_sds0_sgmii_setup(priv);
+	if (ret)
+		dev_err(priv->dev,
+			"failed to configure port 6 SerDes for SGMII: %pe\n",
+			ERR_PTR(ret));
+	else
+		priv->sds_port6_done = true;
 }
 
 static void rtl960x_dsa_mac_link_down(struct phylink_config *config,
 				      unsigned int mode,
 				      phy_interface_t interface)
 {
+	struct dsa_port *dp = dsa_phylink_to_port(config);
+	struct rtl960x_dsa *priv = dp->ds->priv;
+	printk("\n%s:%d Enter!\n", __func__, __LINE__);
+	printk("Config: dev %s\n", dp->name);
+	if (dp->index != 6)
+		return;
+	regmap_write(priv->map, RTL960X_FORCE_P_ABLTY_REG(6), 0);
+	regmap_write(priv->map, RTL960X_ABLTY_FORCE_MODE_REG(6), 0xbfff);
 }
 
 static void rtl960x_dsa_mac_link_up(struct phylink_config *config,
@@ -962,11 +1222,61 @@ static void rtl960x_dsa_mac_link_up(struct phylink_config *config,
 				    int speed, int duplex,
 				    bool tx_pause, bool rx_pause)
 {
+	struct dsa_port *dp = dsa_phylink_to_port(config);
+	struct rtl960x_dsa *priv = dp->ds->priv;
+	u32 sdk_speed, abltry;
+	int ret;
+
 	/*
 	 * The internal GPHYs and the switch MAC sync speed/duplex in hardware,
-	 * so nothing to program here; phylink uses the PHY link state to drive
-	 * the per-port netdev carrier.
+	 * so there is nothing to program for them. Port 6 is the SGMII SerDes
+	 * MAC, which does not follow the PHY link state on its own, so force its
+	 * MAC ability to the phylink-resolved link parameters. This matches what
+	 * the SDK does in dal_rtl9607c_port_macForceAbility_set + state set.
 	 */
+	if (dp->index != 6)
+		return;
+
+	switch (speed) {
+	case SPEED_10:
+		sdk_speed = 0;		/* PORT_SPEED_10M */
+		break;
+	case SPEED_100:
+		sdk_speed = 1;		/* PORT_SPEED_100M */
+		break;
+	case SPEED_2500:
+		sdk_speed = 5;		/* PORT_SPEED_2G5 */
+		break;
+	case SPEED_1000:
+	default:
+		sdk_speed = 2;		/* PORT_SPEED_1000M */
+		break;
+	}
+
+	/* SPEED01_ABLTY <-> speed[1:0], SPEED23_ABLTY <-> speed[3:2] */
+	abltry = FIELD_PREP(RTL960X_FORCE_P_ABLTY_SPEED_MASK, sdk_speed & 0x3) |
+		 FIELD_PREP(RTL960X_FORCE_P_ABLTY_SPEED23_MASK, sdk_speed >> 2) |
+		 RTL960X_FORCE_P_ABLTY_LINK;
+// Hardcoded in SDK
+//	if (duplex == DUPLEX_FULL)
+		abltry |= RTL960X_FORCE_P_ABLTY_DUPLEX;
+//	if (tx_pause)
+//		abltry |= RTL960X_FORCE_P_ABLTY_TX_PAUSE;
+//	if (rx_pause)
+//		abltry |= RTL960X_FORCE_P_ABLTY_RX_PAUSE;
+
+	ret = regmap_write(priv->map, RTL960X_FORCE_P_ABLTY_REG(6), abltry);
+	if (ret)
+		dev_err(priv->dev,
+			"failed to force port 6 MAC ability: %pe\n",
+			ERR_PTR(ret));
+
+	ret = regmap_write(priv->map, RTL960X_ABLTY_FORCE_MODE_REG(6),
+			   RTL960X_ABLTY_FORCE_MODE_ENABLE);
+	if (ret)
+		dev_err(priv->dev,
+			"failed to enable port 6 force mode: %pe\n",
+			ERR_PTR(ret));
 }
 
 static const struct phylink_mac_ops rtl960x_dsa_phylink_mac_ops = {
@@ -1035,6 +1345,21 @@ static int rtl960x_dsa_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->map))
 		return dev_err_probe(dev, PTR_ERR(priv->map),
 				     "failed to get switch-core regmap\n");
+
+	/*
+	 * PoC: map the "common IP enable" registers directly. These live in
+	 * the soc peripheral space (see RTL960X_IP_COMMON/IP_EN_ADDR), not
+	 * in the switch0 regmap.
+	 */
+	priv->ip_common = devm_ioremap(dev, RTL960X_IP_COMMON_ADDR, 0x4);
+	if (!priv->ip_common)
+		return dev_err_probe(dev, -ENOMEM,
+				     "failed to map IP common registers\n");
+
+	priv->ip_en = devm_ioremap(dev, RTL960X_IP_EN_ADDR, 0x4);
+	if (!priv->ip_en)
+		return dev_err_probe(dev, -ENOMEM,
+				     "failed to map IP enable registers\n");
 
 	ds->dev = dev;
 	ds->num_ports = RTL960X_NUM_PORTS;

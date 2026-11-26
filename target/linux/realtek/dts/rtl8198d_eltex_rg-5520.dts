@@ -202,12 +202,35 @@
 	PHY_C22(3, 3)
 };
 
+&ext_mdio0 {
+	status = "okay";
+
+	phy6: ethernet-phy@6 {
+		reg = <6>;
+		// Needed to... identification while in reset?..
+		// TODO why it's needed?
+		compatible = "ethernet-phy-id001c.c849", "ethernet-phy-ieee802.3-c22";
+
+		reset-gpios = <&gpio1 28 GPIO_ACTIVE_LOW>;
+		reset-deassert-us = <70000>; /* at least 68ms */
+		reset-assert-us = <15000>; /* 15ms */
+	};
+};
+
 &switch0 {
 	ethernet-ports {
 		SWITCH_PORT(0, 4, internal)
 		SWITCH_PORT(1, 3, internal)
 		SWITCH_PORT(2, 2, internal)
 		SWITCH_PORT(3, 1, internal)
+
+		port_wan: port@6 {
+			reg = <6>;
+			label = "wan";
+			// TODO pcs-handle
+			phy-handle = <&phy6>;
+			phy-mode = "sgmii";
+		};
 	};
 };
 

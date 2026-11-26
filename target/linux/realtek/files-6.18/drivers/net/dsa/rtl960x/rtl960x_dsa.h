@@ -39,6 +39,18 @@ struct rtl960x_dsa {
 	struct device *dev;
 	struct regmap *map;
 	/*
+	 * PoC: SerDes / CPHY "common IP enable" registers live in the soc
+	 * peripheral space (SDK 0xB8000600 and 0xB8000508, i.e. OpenWrt
+	 * 0x18000600 and 0x18000508), outside the switch register map, so
+	 * they are ioremapped directly for now instead of being described
+	 * in the device tree. ip_common takes bit 29; ip_en takes bits
+	 * 27 and 28.
+	 */
+	void __iomem *ip_common;
+	void __iomem *ip_en;
+	/* port 6 SerDes has already been programmed into SGMII_MAC mode */
+	bool sds_port6_done;
+	/*
 	 * l2_lock keeps a whole FDB dump walk atomic against the FDB add/del
 	 * work items, which run from DSA's deferred workqueue, and serialises
 	 * the L2 flush engine.
